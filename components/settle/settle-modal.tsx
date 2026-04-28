@@ -17,14 +17,20 @@ export function SettleModal({ isOpen, balance, onClose, onSettle }: SettleModalP
   const [isSettling, setIsSettling] = useState(false)
   const [showSuccess, setShowSuccess] = useState(false)
   const [showTransfer, setShowTransfer] = useState(false)
+  const [settleType, setSettleType] = useState<'full' | 'custom'>('full')
+  const [customAmount, setCustomAmount] = useState('')
 
   useEffect(() => {
     if (!isOpen) {
       setIsSettling(false)
       setShowSuccess(false)
       setShowTransfer(false)
+      setSettleType('full')
+      setCustomAmount('')
+    } else if (balance) {
+      setCustomAmount(Math.abs(balance.amount).toString())
     }
-  }, [isOpen])
+  }, [isOpen, balance])
 
   if (!balance) return null
 
@@ -94,10 +100,10 @@ export function SettleModal({ isOpen, balance, onClose, onSettle }: SettleModalP
             <div className="p-6">
               <AnimatePresence mode="wait">
                 {showSuccess ? (
-                  <SuccessState amount={balance.amount} userName={balance.user.name} />
+                  <SuccessState amount={settleType === 'custom' ? (isOwed ? parseFloat(customAmount) : -parseFloat(customAmount)) : balance.amount} userName={balance.user.name} />
                 ) : showTransfer ? (
                   <TransferAnimation 
-                    amount={balance.amount} 
+                    amount={settleType === 'custom' ? parseFloat(customAmount) : balance.amount} 
                     initials={initials}
                     color={balance.user.color}
                     isOwed={isOwed}
@@ -125,12 +131,49 @@ export function SettleModal({ isOpen, balance, onClose, onSettle }: SettleModalP
 
                     {/* Amount display */}
                     <div className="text-center py-6">
+                      <div className="flex justify-center mb-6">
+                        <div className="bg-secondary p-1 rounded-xl flex gap-1">
+                          <button 
+                            onClick={() => {
+                              setSettleType('full')
+                              setCustomAmount(Math.abs(balance.amount).toString())
+                            }} 
+                            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${settleType === 'full' ? 'bg-background shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
+                          >
+                            Full Amount
+                          </button>
+                          <button 
+                            onClick={() => setSettleType('custom')} 
+                            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${settleType === 'custom' ? 'bg-background shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
+                          >
+                            Custom Amount
+                          </button>
+                        </div>
+                      </div>
+                      
                       <p className="text-sm text-muted-foreground mb-2">
                         {isOwed ? 'Request' : 'Send'}
                       </p>
-                      <p className={`text-5xl font-bold ${isOwed ? 'text-positive' : 'text-negative'}`}>
-                        ${Math.abs(balance.amount).toFixed(2)}
-                      </p>
+                      
+                      {settleType === 'full' ? (
+                        <p className={`text-5xl font-bold ${isOwed ? 'text-positive' : 'text-negative'}`}>
+                          ${Math.abs(balance.amount).toFixed(2)}
+                        </p>
+                      ) : (
+                        <div className="flex items-center justify-center text-5xl font-bold gap-1">
+                          <span className={isOwed ? 'text-positive' : 'text-negative'}>$</span>
+                          <input 
+                            type="number" 
+                            step="0.01"
+                            min="0"
+                            max={Math.abs(balance.amount)}
+                            value={customAmount}
+                            onChange={e => setCustomAmount(e.target.value)}
+                            className={`w-32 bg-transparent border-b-2 border-transparent focus:border-primary/50 focus:outline-none text-center ${isOwed ? 'text-positive' : 'text-negative'}`}
+                            autoFocus
+                          />
+                        </div>
+                      )}
                     </div>
 
                     {/* Payment methods */}

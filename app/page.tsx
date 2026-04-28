@@ -8,11 +8,14 @@ import { SettingsView } from '@/components/settings/settings-view'
 import { NotificationsView } from '@/components/notifications/notifications-view'
 import { CreateGroupView } from '@/components/groups/create-group-view'
 import { AddMembersView } from '@/components/groups/add-members-view'
+import { ActivityView } from '@/components/activity/activity-view'
+import { ProfileView } from '@/components/profile/profile-view'
+import { InviteView } from '@/components/friends/invite-view'
 import { AddExpenseModal } from '@/components/expense/add-expense-modal'
 import { SettleModal } from '@/components/settle/settle-modal'
 import type { Group, Balance } from '@/lib/mock-data'
 
-type View = 'dashboard' | 'group' | 'settings' | 'notifications' | 'create-group' | 'add-members'
+type View = 'dashboard' | 'group' | 'settings' | 'notifications' | 'create-group' | 'add-members' | 'activity' | 'profile' | 'invite'
 
 export default function Home() {
   const [view, setView] = useState<View>('dashboard')
@@ -63,15 +66,17 @@ export default function Home() {
             onOpenSettings={() => setView('settings')}
             onOpenNotifications={() => setView('notifications')}
             onCreateGroup={() => setView('create-group')}
+            onOpenProfile={() => setView('profile')}
+            onOpenActivity={() => setView('activity')}
           />
         ) : view === 'settings' ? (
           <SettingsView key="settings" onBack={() => setView('dashboard')} />
         ) : view === 'notifications' ? (
           <NotificationsView key="notifications" onBack={() => setView('dashboard')} />
         ) : view === 'create-group' ? (
-          <CreateGroupView key="create-group" onBack={() => setView('dashboard')} onComplete={() => setView('dashboard')} />
+          <CreateGroupView key="create-group" onBack={() => setView('dashboard')} onComplete={() => setView('dashboard')} onInviteFriend={() => setView('invite')} />
         ) : view === 'add-members' && selectedGroup ? (
-          <AddMembersView key="add-members" groupId={selectedGroup.id} onBack={() => setView('group')} />
+          <AddMembersView key="add-members" groupId={selectedGroup.id} onBack={() => setView('group')} onInviteFriend={() => setView('invite')} />
         ) : selectedGroup ? (
           <GroupSpace
             key="group"
@@ -83,6 +88,12 @@ export default function Home() {
             }}
             onAddMembers={() => setView('add-members')}
           />
+        ) : view === 'activity' ? (
+          <ActivityView key="activity" onBack={() => setView('dashboard')} />
+        ) : view === 'profile' ? (
+          <ProfileView key="profile" onBack={() => setView('dashboard')} onOpenSettings={() => setView('settings')} onOpenActivity={() => setView('activity')} />
+        ) : view === 'invite' ? (
+          <InviteView key="invite" onBack={() => setView(selectedGroup ? 'add-members' : 'create-group')} />
         ) : null}
       </AnimatePresence>
 

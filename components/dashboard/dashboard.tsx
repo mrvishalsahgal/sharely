@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Plus, Bell, Settings, Search } from 'lucide-react'
+import { Plus, Bell, Settings, Search, User, Activity } from 'lucide-react'
 import { AnimatedBalance } from './animated-balance'
 import { BalanceCard } from './balance-card'
 import { GroupCard } from './group-card'
@@ -17,6 +17,8 @@ interface DashboardProps {
   onOpenSettings: () => void
   onOpenNotifications: () => void
   onCreateGroup: () => void
+  onOpenProfile: () => void
+  onOpenActivity: () => void
 }
 
 export function Dashboard({ 
@@ -25,7 +27,9 @@ export function Dashboard({
   onSettle,
   onOpenSettings,
   onOpenNotifications,
-  onCreateGroup
+  onCreateGroup,
+  onOpenProfile,
+  onOpenActivity
 }: DashboardProps) {
   const [showNotification, setShowNotification] = useState(true)
   
@@ -49,6 +53,22 @@ export function Dashboard({
                 className="relative p-2 rounded-xl bg-secondary hover:bg-secondary/80 transition-colors"
               >
                 <Search className="w-5 h-5" />
+              </motion.button>
+              <motion.button
+                onClick={onOpenProfile}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                className="relative p-2 rounded-xl bg-secondary hover:bg-secondary/80 transition-colors"
+              >
+                <User className="w-5 h-5" />
+              </motion.button>
+              <motion.button
+                onClick={onOpenActivity}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                className="relative p-2 rounded-xl bg-secondary hover:bg-secondary/80 transition-colors"
+              >
+                <Activity className="w-5 h-5" />
               </motion.button>
               <motion.button
                 whileHover={{ scale: 1.05 }}

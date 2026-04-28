@@ -1,7 +1,6 @@
 "use client"
 
 import { useState } from "react"
-import Link from "next/link"
 import { motion, AnimatePresence } from "framer-motion"
 import {
   ArrowLeft,
@@ -31,9 +30,10 @@ const groupTypes = [
 interface CreateGroupViewProps {
   onBack: () => void
   onComplete: () => void
+  onInviteFriend: () => void
 }
 
-export function CreateGroupView({ onBack, onComplete }: CreateGroupViewProps) {
+export function CreateGroupView({ onBack, onComplete, onInviteFriend }: CreateGroupViewProps) {
   const [step, setStep] = useState(1)
   const [groupName, setGroupName] = useState("")
   const [selectedEmoji, setSelectedEmoji] = useState("🏠")
@@ -275,20 +275,20 @@ export function CreateGroupView({ onBack, onComplete }: CreateGroupViewProps) {
               </div>
 
               {/* Invite New */}
-              <Link
-                href="/friends/invite"
-                className="flex items-center gap-3 p-3 bg-card rounded-xl border border-dashed border-border hover:border-primary transition-colors"
+              <button
+                onClick={onInviteFriend}
+                className="w-full flex items-center gap-3 p-3 bg-card rounded-xl border border-dashed border-border hover:border-primary transition-colors text-left"
               >
-                <div className="w-12 h-12 rounded-full bg-secondary flex items-center justify-center">
+                <div className="w-12 h-12 rounded-full bg-secondary flex items-center justify-center shrink-0">
                   <Plus className="w-5 h-5 text-muted-foreground" />
                 </div>
-                <div className="text-left">
+                <div className="flex-1">
                   <div className="font-medium">Invite New Friend</div>
                   <div className="text-sm text-muted-foreground">
                     Send an invite link
                   </div>
                 </div>
-              </Link>
+              </button>
             </motion.div>
           )}
         </AnimatePresence>

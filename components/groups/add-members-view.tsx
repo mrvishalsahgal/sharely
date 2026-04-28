@@ -1,7 +1,6 @@
 "use client"
 
 import { useState } from "react"
-import Link from "next/link"
 import { motion } from "framer-motion"
 import {
   ArrowLeft,
@@ -20,9 +19,10 @@ import { groups, users } from "@/lib/mock-data"
 interface AddMembersViewProps {
   groupId: string
   onBack: () => void
+  onInviteFriend: () => void
 }
 
-export function AddMembersView({ groupId, onBack }: AddMembersViewProps) {
+export function AddMembersView({ groupId, onBack, onInviteFriend }: AddMembersViewProps) {
   const group = groups.find((g) => g.id === groupId) || groups[0]
 
   const [searchQuery, setSearchQuery] = useState("")
@@ -170,8 +170,8 @@ export function AddMembersView({ groupId, onBack }: AddMembersViewProps) {
                   ? "No friends found matching your search"
                   : "All your friends are already in this group"}
               </p>
-              <Button variant="outline" asChild>
-                <Link href="/friends/invite">Invite New Friend</Link>
+              <Button variant="outline" onClick={onInviteFriend}>
+                Invite New Friend
               </Button>
             </div>
           ) : (
@@ -222,20 +222,20 @@ export function AddMembersView({ groupId, onBack }: AddMembersViewProps) {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.3 }}
         >
-          <Link
-            href="/friends/invite"
-            className="flex items-center gap-3 p-3 bg-card rounded-xl border border-dashed border-border hover:border-primary transition-colors"
+          <button
+            onClick={onInviteFriend}
+            className="w-full flex items-center gap-3 p-3 bg-card rounded-xl border border-dashed border-border hover:border-primary transition-colors text-left"
           >
-            <div className="w-12 h-12 rounded-full bg-secondary flex items-center justify-center">
+            <div className="w-12 h-12 rounded-full bg-secondary flex items-center justify-center shrink-0">
               <Plus className="w-5 h-5 text-muted-foreground" />
             </div>
-            <div className="text-left">
+            <div className="flex-1">
               <div className="font-medium">Invite New Friend</div>
               <div className="text-sm text-muted-foreground">
                 Send an invite via email or link
               </div>
             </div>
-          </Link>
+          </button>
         </motion.div>
       </main>
     </div>

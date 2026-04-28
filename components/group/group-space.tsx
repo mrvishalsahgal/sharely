@@ -2,7 +2,8 @@
 
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ArrowLeft, Plus, Users, Settings, PieChart, MoreHorizontal } from 'lucide-react'
+import { ArrowLeft, Plus, Users, Settings, PieChart, MoreHorizontal, Edit2, BellOff, LogOut } from 'lucide-react'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { ExpenseBubble } from './expense-bubble'
 import type { Group, Expense } from '@/lib/mock-data'
 import { expenses as allExpenses } from '@/lib/mock-data'
@@ -75,13 +76,31 @@ export function GroupSpace({ group, onBack, onAddExpense, onAddMembers }: GroupS
               >
                 <Users className="w-5 h-5" />
               </motion.button>
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                className="p-2 rounded-xl bg-secondary hover:bg-secondary/80 transition-colors"
-              >
-                <MoreHorizontal className="w-5 h-5" />
-              </motion.button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    className="p-2 rounded-xl bg-secondary hover:bg-secondary/80 transition-colors"
+                  >
+                    <MoreHorizontal className="w-5 h-5" />
+                  </motion.button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-48 p-2 rounded-xl border-border bg-card shadow-xl">
+                  <DropdownMenuItem className="gap-2 cursor-pointer rounded-lg p-2 hover:bg-secondary">
+                    <Edit2 className="w-4 h-4 text-muted-foreground" />
+                    <span>Edit Group</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem className="gap-2 cursor-pointer rounded-lg p-2 hover:bg-secondary">
+                    <BellOff className="w-4 h-4 text-muted-foreground" />
+                    <span>Mute Notifications</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem className="gap-2 cursor-pointer rounded-lg p-2 hover:bg-negative/20 text-negative focus:text-negative focus:bg-negative/20">
+                    <LogOut className="w-4 h-4" />
+                    <span>Leave Group</span>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </div>
 
