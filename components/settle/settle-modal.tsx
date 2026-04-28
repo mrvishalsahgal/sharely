@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { X, Send, Check, Sparkles } from 'lucide-react'
 import confetti from 'canvas-confetti'
-import type { Balance } from '@/lib/mock-data'
+import type { Balance } from '@/lib/types'
 
 interface SettleModalProps {
   isOpen: boolean
@@ -35,7 +35,7 @@ export function SettleModal({ isOpen, balance, onClose, onSettle }: SettleModalP
   if (!balance) return null
 
   const isOwed = balance.amount > 0
-  const initials = balance.user.name
+  const initials = (balance.user?.name || '?')
     .split(' ')
     .map(n => n[0])
     .join('')
@@ -45,24 +45,43 @@ export function SettleModal({ isOpen, balance, onClose, onSettle }: SettleModalP
     setIsSettling(true)
     setShowTransfer(true)
 
-    // Simulate transfer animation
-    await new Promise(resolve => setTimeout(resolve, 2000))
+    try {
+      const finalAmount = settleType === 'custom' ? parseFloat(customAmount) : Math.abs(balance.amount)
+      
+      const response = await fetch('/api/settlements', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          toUser: balance.user.id,
+          amount: finalAmount,
+          method: 'cash', // Default for now
+          // groupId: group.id, // If we have group context
+        })
+      })
 
-    setShowTransfer(false)
-    setShowSuccess(true)
+      if (!response.ok) throw new Error('Settlement failed')
 
-    // Trigger confetti
-    confetti({
-      particleCount: 100,
-      spread: 70,
-      origin: { y: 0.6 },
-      colors: ['#22c55e', '#10b981', '#059669', '#34d399']
-    })
+      setShowTransfer(false)
+      setShowSuccess(true)
 
-    setTimeout(() => {
-      onSettle()
-      onClose()
-    }, 2000)
+      // Trigger confetti
+      confetti({
+        particleCount: 100,
+        spread: 70,
+        origin: { y: 0.6 },
+        colors: ['#22c55e', '#10b981', '#059669', '#34d399']
+      })
+
+      setTimeout(() => {
+        onSettle()
+        onClose()
+      }, 2000)
+    } catch (error) {
+      console.error('Settlement error:', error)
+      setIsSettling(false)
+      setShowTransfer(false)
+      // Add error feedback here if needed
+    }
   }
 
   return (
@@ -100,12 +119,12 @@ export function SettleModal({ isOpen, balance, onClose, onSettle }: SettleModalP
             <div className="p-6">
               <AnimatePresence mode="wait">
                 {showSuccess ? (
-                  <SuccessState amount={settleType === 'custom' ? (isOwed ? parseFloat(customAmount) : -parseFloat(customAmount)) : balance.amount} userName={balance.user.name} />
+                  <SuccessState amount={settleType === 'custom' ? (isOwed ? parseFloat(customAmount) : -parseFloat(customAmount)) : balance.amount} userName={balance.user?.name || 'Unknown'} />
                 ) : showTransfer ? (
                   <TransferAnimation 
                     amount={settleType === 'custom' ? parseFloat(customAmount) : balance.amount} 
                     initials={initials}
-                    color={balance.user.color}
+                    color={balance.user.color || 'bg-primary'}
                     isOwed={isOwed}
                   />
                 ) : (
@@ -122,7 +141,7 @@ export function SettleModal({ isOpen, balance, onClose, onSettle }: SettleModalP
                         {initials}
                       </div>
                       <div>
-                        <p className="font-semibold text-lg">{balance.user.name}</p>
+                        <p className="font-semibold text-lg">{balance.user?.name || 'Unknown'}</p>
                         <p className="text-sm text-muted-foreground">
                           {isOwed ? 'owes you' : 'you owe'}
                         </p>

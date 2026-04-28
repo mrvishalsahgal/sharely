@@ -2,7 +2,7 @@
 
 import { motion } from 'framer-motion'
 import { ArrowUpRight, ArrowDownLeft } from 'lucide-react'
-import type { Balance } from '@/lib/mock-data'
+import type { Balance } from '@/lib/types'
 
 interface BalanceCardProps {
   balance: Balance
@@ -16,10 +16,8 @@ export function BalanceCard({ balance, index, onSettle }: BalanceCardProps) {
   const isSettled = amount === 0
   
   const initials = user.name
-    .split(' ')
-    .map(n => n[0])
-    .join('')
-    .toUpperCase()
+    ? user.name.split(' ').map(n => n[0]).join('').toUpperCase()
+    : '??'
 
   return (
     <motion.div
@@ -35,7 +33,7 @@ export function BalanceCard({ balance, index, onSettle }: BalanceCardProps) {
     >
       <div className="flex items-center gap-4">
         {/* Avatar */}
-        <div className={`relative w-12 h-12 rounded-full flex items-center justify-center text-lg font-semibold ${user.color} text-primary-foreground`}>
+        <div className={`relative w-12 h-12 rounded-full flex items-center justify-center text-lg font-semibold ${user.color || 'bg-primary'} text-primary-foreground`}>
           {initials}
           {/* Live indicator */}
           {!isSettled && (

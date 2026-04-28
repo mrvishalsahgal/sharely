@@ -18,6 +18,7 @@ import {
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Switch } from "@/components/ui/switch"
+import { signOut } from "next-auth/react"
 
 interface SettingsViewProps {
   onBack: () => void
@@ -193,6 +194,7 @@ export function SettingsView({ onBack }: SettingsViewProps) {
         >
           <Button
             variant="ghost"
+            onClick={() => signOut({ callbackUrl: "/" })}
             className="w-full justify-start text-negative hover:text-negative hover:bg-negative/10 h-14 rounded-2xl"
           >
             <LogOut className="w-5 h-5 mr-3" />

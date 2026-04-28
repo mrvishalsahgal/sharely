@@ -1,6 +1,5 @@
 "use client"
 
-import { useState } from "react"
 import { motion } from "framer-motion"
 import {
   ArrowLeft,
@@ -9,11 +8,13 @@ import {
   CheckCheck,
   Receipt,
   CreditCard,
-  UserPlus,
   AlertCircle,
+  UserPlus,
+  Loader2,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { users } from "@/lib/mock-data"
+import useSWR from 'swr'
+import { fetcher } from '@/lib/fetcher'
 
 interface Notification {
   id: string
@@ -21,79 +22,59 @@ interface Notification {
   title: string
   message: string
   read: boolean
-  user: typeof users[0]
+  user: any
   timestamp: Date
   actionUrl?: string
 }
-
-const notifications: Notification[] = [
-  {
-    id: "1",
-    type: "expense_added",
-    title: "New expense added",
-    message: "Alex Chen added \"Grocery run at Whole Foods\" - you owe $39.10",
-    read: false,
-    user: users[1],
-    timestamp: new Date(Date.now() - 1000 * 60 * 30),
-    actionUrl: "/",
-  },
-  {
-    id: "2",
-    type: "payment_received",
-    title: "Payment received",
-    message: "Sarah Kim paid you $5.75 for Netflix subscription",
-    read: false,
-    user: users[2],
-    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 2),
-  },
-  {
-    id: "3",
-    type: "payment_reminder",
-    title: "Friendly reminder",
-    message: "You owe Mike Ross $42.00 - it's been a week!",
-    read: false,
-    user: users[3],
-    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24),
-    actionUrl: "/",
-  },
-  {
-    id: "4",
-    type: "friend_request",
-    title: "Friend request",
-    message: "James Lee wants to connect with you",
-    read: true,
-    user: users[5],
-    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 48),
-    actionUrl: "/friends",
-  },
-  {
-    id: "5",
-    type: "group_invite",
-    title: "Group invitation",
-    message: "Emma Davis invited you to join \"Weekend Brunch Crew\"",
-    read: true,
-    user: users[4],
-    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 72),
-  },
-]
 
 interface NotificationsViewProps {
   onBack: () => void
 }
 
 export function NotificationsView({ onBack }: NotificationsViewProps) {
-  const [notificationList, setNotificationList] = useState(notifications)
+  const { data: notificationsData, mutate, isLoading } = useSWR<any[]>('/api/notifications', fetcher)
+
+  const notificationList = (notificationsData || []).map(n => ({
+    id: n._id,
+    type: n.type as any,
+    title: n.type === 'expense_added' ? 'New expense added' : 'Payment received',
+    message: n.message,
+    read: n.isRead,
+    user: n.fromUser || { name: 'System', color: 'bg-primary' },
+    timestamp: new Date(n.createdAt),
+  }))
 
   const unreadCount = notificationList.filter((n) => !n.read).length
 
-  const markAsRead = (id: string) => {
-    setNotificationList((prev) =>
-      prev.map((n) => (n.id === id ? { ...n, read: true } : n))
-    )
+  const markAsRead = async (id: string) => {
+    try {
+      await fetch('/api/notifications', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, isRead: true })
+      })
+      mutate()
+    } catch (error) {
+      console.error('Failed to mark as read', error)
+    }
   }
 
-  const markAllAsRead = () => {
-    setNotificationList((prev) => prev.map((n) => ({ ...n, read: true })))
+  const markAllAsRead = async () => {
+    try {
+      await fetch('/api/notifications/read-all', { method: 'POST' })
+      mutate()
+    } catch (error) {
+      console.error('Failed to mark all as read', error)
+    }
+  }
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        <p className="text-muted-foreground mt-4">Loading notifications...</p>
+      </div>
+    )
   }
 
   const formatTime = (date: Date) => {

@@ -3,12 +3,14 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Plus, Bell, Settings, Search, User, Activity } from 'lucide-react'
+import { Plus, Bell, Settings, Search, User, Activity, Loader2 } from 'lucide-react'
+import useSWR from 'swr'
+import { fetcher } from '@/lib/fetcher'
 import { AnimatedBalance } from './animated-balance'
 import { BalanceCard } from './balance-card'
 import { GroupCard } from './group-card'
 import { WeeklySummary } from './weekly-summary'
-import { balances, groups, type Balance, type Group } from '@/lib/mock-data'
+import type { Balance, Group } from '@/lib/types'
 
 interface DashboardProps {
   onAddExpense: () => void
@@ -32,9 +34,32 @@ export function Dashboard({
   onOpenActivity
 }: DashboardProps) {
   const [showNotification, setShowNotification] = useState(true)
+
+  const { data: groupsData, error: groupsError, isLoading: groupsLoading } = useSWR<any[]>('/api/groups', fetcher)
+  const { data: balancesData, error: balancesError, isLoading: balancesLoading } = useSWR<Balance[]>('/api/users/me/balances', fetcher)
   
+  const balances = balancesData || []
+  const groups = (groupsData || []).map(g => ({
+    id: g._id,
+    name: g.name,
+    emoji: g.emoji,
+    type: g.type || 'home',
+    members: g.members,
+    totalExpenses: 0,
+    userBalance: 0
+  })) as Group[]
+
   const netBalance = balances.reduce((sum, b) => sum + b.amount, 0)
-  const activeBalances = balances.filter(b => b.amount !== 0)
+  const activeBalances = balances.filter(b => Math.abs(b.amount) > 0.01)
+
+  if (groupsLoading || balancesLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen gap-4">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        <p className="text-muted-foreground animate-pulse">Loading your dashboard...</p>
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen pb-24">

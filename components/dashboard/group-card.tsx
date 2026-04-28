@@ -2,18 +2,19 @@
 
 import { motion } from 'framer-motion'
 import { Users, ChevronRight } from 'lucide-react'
-import type { Group } from '@/lib/mock-data'
+import type { Group } from '@/lib/types'
 
 interface GroupCardProps {
-  group: Group
+  group: Group & { yourBalance?: number }
   index: number
   onClick?: (group: Group) => void
 }
 
 export function GroupCard({ group, index, onClick }: GroupCardProps) {
-  const isPositive = group.yourBalance > 0
-  const isNegative = group.yourBalance < 0
-  const isSettled = group.yourBalance === 0
+  const balance = group.userBalance ?? group.yourBalance ?? 0
+  const isPositive = balance > 0
+  const isNegative = balance < 0
+  const isSettled = balance === 0
 
   return (
     <motion.div
@@ -75,12 +76,12 @@ export function GroupCard({ group, index, onClick }: GroupCardProps) {
             }`}>
               {isPositive && '+'}
               {isNegative && '-'}
-              ${Math.abs(group.yourBalance).toFixed(2)}
+              ${Math.abs(balance).toFixed(2)}
             </p>
           </div>
           <div className="text-right">
             <p className="text-xs text-muted-foreground uppercase tracking-wide">Total Spent</p>
-            <p className="text-xl font-bold">${group.totalExpenses.toLocaleString()}</p>
+            <p className="text-xl font-bold">${(group.totalExpenses || 0).toLocaleString()}</p>
           </div>
         </div>
 
@@ -94,11 +95,11 @@ export function GroupCard({ group, index, onClick }: GroupCardProps) {
               .toUpperCase()
             return (
               <motion.div
-                key={member.id}
+                key={member._id || member.id}
                 initial={{ opacity: 0, scale: 0 }}
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ delay: 0.3 + i * 0.1 }}
-                className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold ${member.color} text-primary-foreground border-2 border-background`}
+                className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold ${member.color || 'bg-primary'} text-primary-foreground border-2 border-background`}
               >
                 {initials}
               </motion.div>

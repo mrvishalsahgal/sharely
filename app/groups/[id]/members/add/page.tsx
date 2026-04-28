@@ -28,7 +28,7 @@ export default function AddMembersPage() {
   const [isAdding, setIsAdding] = useState(false)
   const [linkCopied, setLinkCopied] = useState(false)
 
-  const existingMemberIds = group.members.map((m) => m.id)
+  const existingMemberIds = group.members.map((m: any) => m.id)
   const availableUsers = users.filter(
     (u) => u.id !== "current" && !existingMemberIds.includes(u.id)
   )

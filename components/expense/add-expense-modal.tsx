@@ -2,8 +2,10 @@
 
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { X, Check, Users, ChevronRight, Sparkles, User, ArrowLeft } from 'lucide-react'
-import { categories, users, groups, currentUser } from '@/lib/mock-data'
+import { X, Check, Users, ChevronRight, Sparkles, User, ArrowLeft, Loader2 } from 'lucide-react'
+import useSWR from 'swr'
+import { fetcher } from '@/lib/fetcher'
+import { categories } from '@/lib/mock-data'
 
 interface AddExpenseModalProps {
   isOpen: boolean
@@ -25,6 +27,12 @@ interface CustomSplitAmounts {
 }
 
 export function AddExpenseModal({ isOpen, onClose, onAdd, defaultGroupId }: AddExpenseModalProps) {
+  const { data: groupsData } = useSWR<any[]>('/api/groups', fetcher)
+  const { data: usersData } = useSWR<any[]>('/api/users', fetcher)
+  
+  const groups = groupsData || []
+  const users = usersData || []
+
   const [step, setStep] = useState(0)
   const [expenseType, setExpenseType] = useState<'group' | 'people' | null>(null)
   const [selectedGroupId, setSelectedGroupId] = useState<string | null>(defaultGroupId || null)
@@ -43,9 +51,9 @@ export function AddExpenseModal({ isOpen, onClose, onAdd, defaultGroupId }: AddE
       if (defaultGroupId) {
         setExpenseType('group')
         setSelectedGroupId(defaultGroupId)
-        const group = groups.find(g => g.id === defaultGroupId)
+        const group = groups.find(g => (g._id || g.id) === defaultGroupId)
         if (group) {
-          setSelectedMembers(group.members.filter(m => m.id !== currentUser.id).map(m => m.id))
+          setSelectedMembers(group.members.map((m: any) => m._id))
         }
         setStep(1)
       } else {
@@ -61,31 +69,43 @@ export function AddExpenseModal({ isOpen, onClose, onAdd, defaultGroupId }: AddE
       setCustomAmounts({})
       setShowSuccess(false)
     }
-  }, [isOpen, defaultGroupId])
+  }, [isOpen, defaultGroupId, groups.length])
 
   const handleSubmit = async () => {
     setIsSubmitting(true)
-    await new Promise(resolve => setTimeout(resolve, 1000))
-    setIsSubmitting(false)
-    setShowSuccess(true)
     
-    setTimeout(() => {
-      const splitWithData = selectedMembers.map(id => ({
-        id,
-        amount: splitType === 'custom' 
-          ? parseFloat(customAmounts[id] || '0')
-          : parseFloat(amount || '0') / (selectedMembers.length + 1)
-      }))
-
-      onAdd({
-        description,
-        amount: parseFloat(amount),
-        category: selectedCategory || 'other',
-        splitWith: splitWithData,
-        groupId: selectedGroupId || undefined,
+    try {
+      const response = await fetch('/api/expenses', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: description,
+          amount: parseFloat(amount),
+          category: selectedCategory || 'other',
+          groupId: selectedGroupId,
+          splitWith: selectedMembers
+        })
       })
-      onClose()
-    }, 1500)
+
+      if (!response.ok) throw new Error('Failed to add expense')
+
+      setIsSubmitting(false)
+      setShowSuccess(true)
+      
+      setTimeout(() => {
+        onAdd({
+          description,
+          amount: parseFloat(amount),
+          category: selectedCategory || 'other',
+          splitWith: selectedMembers.map(id => ({ id, amount: 0 })), // Simplified for now
+          groupId: selectedGroupId || undefined,
+        })
+        onClose()
+      }, 1500)
+    } catch (error) {
+      console.error('Add expense error:', error)
+      setIsSubmitting(false)
+    }
   }
 
   const handleClose = () => {
@@ -111,8 +131,6 @@ export function AddExpenseModal({ isOpen, onClose, onAdd, defaultGroupId }: AddE
     ? totalAmount / (selectedMembers.length + 1) 
     : totalAmount
 
-  const otherUsers = users.filter(u => u.id !== currentUser.id)
-
   const canProceed = () => {
     switch (step) {
       case 0: return expenseType !== null && (expenseType === 'people' || selectedGroupId !== null)
@@ -125,9 +143,9 @@ export function AddExpenseModal({ isOpen, onClose, onAdd, defaultGroupId }: AddE
 
   const handleNext = () => {
     if (step === 0 && expenseType === 'group' && selectedGroupId) {
-      const group = groups.find(g => g.id === selectedGroupId)
+      const group = groups.find(g => (g._id || g.id) === selectedGroupId)
       if (group) {
-        setSelectedMembers(group.members.filter(m => m.id !== currentUser.id).map(m => m.id))
+        setSelectedMembers(group.members.map((m: any) => m._id))
       }
     }
     setStep(step + 1)
@@ -211,6 +229,7 @@ export function AddExpenseModal({ isOpen, onClose, onAdd, defaultGroupId }: AddE
                     setExpenseType={setExpenseType}
                     selectedGroupId={selectedGroupId}
                     setSelectedGroupId={setSelectedGroupId}
+                    groups={groups}
                   />
                 ) : step === 1 ? (
                   <Step1
@@ -229,8 +248,8 @@ export function AddExpenseModal({ isOpen, onClose, onAdd, defaultGroupId }: AddE
                 ) : (
                   <Step3
                     users={expenseType === 'group' && selectedGroupId 
-                      ? groups.find(g => g.id === selectedGroupId)?.members.filter(m => m.id !== currentUser.id) || []
-                      : otherUsers
+                      ? groups.find(g => (g._id || g.id) === selectedGroupId)?.members || []
+                      : users
                     }
                     selectedMembers={selectedMembers}
                     setSelectedMembers={setSelectedMembers}
@@ -315,12 +334,14 @@ function Step0({
   expenseType,
   setExpenseType,
   selectedGroupId,
-  setSelectedGroupId
+  setSelectedGroupId,
+  groups
 }: {
   expenseType: 'group' | 'people' | null
   setExpenseType: (v: 'group' | 'people') => void
   selectedGroupId: string | null
   setSelectedGroupId: (v: string | null) => void
+  groups: any[]
 }) {
   return (
     <motion.div
@@ -391,15 +412,15 @@ function Step0({
             <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide">Select group</p>
             <div className="space-y-2">
               {groups.map((group, index) => {
-                const isSelected = selectedGroupId === group.id
+                const isSelected = selectedGroupId === (group._id || group.id)
                 return (
                   <motion.button
-                    key={group.id}
+                    key={group._id || group.id}
                     initial={{ opacity: 0, x: -10 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: index * 0.05 }}
                     whileTap={{ scale: 0.99 }}
-                    onClick={() => setSelectedGroupId(group.id)}
+                    onClick={() => setSelectedGroupId(group._id || group.id)}
                     className={`w-full flex items-center gap-3 p-3 rounded-xl transition-all ${
                       isSelected ? 'bg-primary/10 ring-2 ring-primary' : 'bg-secondary hover:bg-secondary/80'
                     }`}
@@ -564,7 +585,7 @@ function Step3({
   isGroupMode,
   remainingAmount
 }: {
-  users: typeof import('@/lib/mock-data').users
+  users: any[]
   selectedMembers: string[]
   setSelectedMembers: (v: string[]) => void
   splitType: 'equal' | 'custom'
@@ -631,7 +652,7 @@ function Step3({
       {!isGroupMode && (
         <motion.button
           whileTap={{ scale: 0.98 }}
-          onClick={() => setSelectedMembers(users.map(u => u.id))}
+          onClick={() => setSelectedMembers(users.map(u => u._id || u.id))}
           className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-accent/10 text-accent text-sm font-medium"
         >
           <Sparkles className="w-4 h-4" />
@@ -652,13 +673,14 @@ function Step3({
       {/* Members list */}
       <div className="space-y-2">
         {users.map((user, index) => {
-          const isSelected = selectedMembers.includes(user.id)
-          const initials = user.name.split(' ').map(n => n[0]).join('').toUpperCase()
-          const userAmount = customAmounts[user.id] || ''
+          const userId = user._id || user.id
+          const isSelected = selectedMembers.includes(userId)
+          const initials = user.name.split(' ').map((n: string) => n[0]).join('').toUpperCase()
+          const userAmount = customAmounts[userId] || ''
 
           return (
             <motion.div
-              key={user.id}
+              key={userId}
               initial={{ opacity: 0, y: 5 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: index * 0.03 }}
@@ -667,10 +689,10 @@ function Step3({
               }`}
             >
               <button
-                onClick={() => toggleMember(user.id)}
+                onClick={() => toggleMember(userId)}
                 className="w-full flex items-center gap-3 p-3"
               >
-                <div className={`w-9 h-9 rounded-full flex items-center justify-center text-xs font-semibold ${user.color} text-primary-foreground`}>
+                <div className={`w-9 h-9 rounded-full flex items-center justify-center text-xs font-semibold ${user.color || 'bg-primary'} text-primary-foreground`}>
                   {initials}
                 </div>
                 <span className="flex-1 text-left font-medium text-sm">{user.name}</span>
@@ -697,7 +719,7 @@ function Step3({
                     <input
                       type="number"
                       value={userAmount}
-                      onChange={(e) => handleCustomAmountChange(user.id, e.target.value)}
+                      onChange={(e) => handleCustomAmountChange(userId, e.target.value)}
                       onClick={(e) => e.stopPropagation()}
                       placeholder="0.00"
                       className="flex-1 bg-transparent outline-none text-sm font-medium"

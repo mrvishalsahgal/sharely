@@ -13,7 +13,9 @@ import {
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { users } from "@/lib/mock-data"
+import useSWR from "swr"
+import { fetcher } from "@/lib/fetcher"
+import { Loader2 } from "lucide-react"
 
 const groupEmojis = [
   "🏠", "🚗", "🍕", "🎉", "🏖️", "✈️", "🎬", "🏋️", "🎮", "🛒", "💼", "🎓",
@@ -38,27 +40,44 @@ export function CreateGroupView({ onBack, onComplete, onInviteFriend }: CreateGr
   const [groupName, setGroupName] = useState("")
   const [selectedEmoji, setSelectedEmoji] = useState("🏠")
   const [selectedType, setSelectedType] = useState("home")
-  const [selectedMembers, setSelectedMembers] = useState<string[]>([])
+  const [selectedMembers, setSelectedMembers] = useState<any[]>([])
   const [searchQuery, setSearchQuery] = useState("")
   const [isCreating, setIsCreating] = useState(false)
 
-  const availableUsers = users.filter((u) => u.id !== "current")
-  const filteredUsers = availableUsers.filter((u) =>
-    u.name.toLowerCase().includes(searchQuery.toLowerCase())
+  const { data: searchedUsers, isLoading: isSearching } = useSWR<any[]>(
+    searchQuery ? `/api/users?q=${searchQuery}` : null,
+    fetcher
   )
 
-  const toggleMember = (userId: string) => {
+  const toggleMember = (user: any) => {
     setSelectedMembers((prev) =>
-      prev.includes(userId)
-        ? prev.filter((id) => id !== userId)
-        : [...prev, userId]
+      prev.find(m => m._id === user._id)
+        ? prev.filter((m) => m._id !== user._id)
+        : [...prev, user]
     )
   }
 
   const handleCreate = async () => {
     setIsCreating(true)
-    await new Promise((resolve) => setTimeout(resolve, 1500))
-    onComplete()
+    try {
+      const response = await fetch("/api/groups", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: groupName,
+          emoji: selectedEmoji,
+          type: selectedType,
+          memberIds: selectedMembers.map(m => m._id)
+        })
+      })
+
+      if (!response.ok) throw new Error("Failed to create group")
+      
+      onComplete()
+    } catch (error) {
+      console.error("Create group error:", error)
+      setIsCreating(false)
+    }
   }
 
   const canProceed =
@@ -194,32 +213,28 @@ export function CreateGroupView({ onBack, onComplete, onInviteFriend }: CreateGr
               {/* Selected Members */}
               {selectedMembers.length > 0 && (
                 <div className="flex flex-wrap gap-2 p-3 bg-card rounded-xl border border-border">
-                  {selectedMembers.map((id) => {
-                    const user = users.find((u) => u.id === id)
-                    if (!user) return null
-                    return (
-                      <motion.div
-                        key={id}
-                        initial={{ scale: 0 }}
-                        animate={{ scale: 1 }}
-                        exit={{ scale: 0 }}
-                        className="flex items-center gap-2 bg-secondary rounded-full pl-1 pr-2 py-1"
+                  {selectedMembers.map((user) => (
+                    <motion.div
+                      key={user._id}
+                      initial={{ scale: 0 }}
+                      animate={{ scale: 1 }}
+                      exit={{ scale: 0 }}
+                      className="flex items-center gap-2 bg-secondary rounded-full pl-1 pr-2 py-1"
+                    >
+                      <div
+                        className={`w-6 h-6 rounded-full ${user.color || 'bg-primary'} flex items-center justify-center text-xs font-medium text-white`}
                       >
-                        <div
-                          className={`w-6 h-6 rounded-full ${user.color} flex items-center justify-center text-xs font-medium text-white`}
-                        >
-                          {user.name.charAt(0)}
-                        </div>
-                        <span className="text-sm">{user.name.split(" ")[0]}</span>
-                        <button
-                          onClick={() => toggleMember(id)}
-                          className="w-4 h-4 rounded-full hover:bg-muted flex items-center justify-center"
-                        >
-                          <X className="w-3 h-3" />
-                        </button>
-                      </motion.div>
-                    )
-                  })}
+                        {user.name.charAt(0)}
+                      </div>
+                      <span className="text-sm">{user.name.split(" ")[0]}</span>
+                      <button
+                        onClick={() => toggleMember(user)}
+                        className="w-4 h-4 rounded-full hover:bg-muted flex items-center justify-center"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </motion.div>
+                  ))}
                 </div>
               )}
 
@@ -227,7 +242,7 @@ export function CreateGroupView({ onBack, onComplete, onInviteFriend }: CreateGr
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                 <Input
-                  placeholder="Search friends..."
+                  placeholder="Search friends by name or email..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="pl-10 h-12 bg-card border-border"
@@ -236,42 +251,50 @@ export function CreateGroupView({ onBack, onComplete, onInviteFriend }: CreateGr
 
               {/* User List */}
               <div className="space-y-2">
-                {filteredUsers.map((user) => {
-                  const isSelected = selectedMembers.includes(user.id)
-                  return (
-                    <motion.button
-                      key={user.id}
-                      onClick={() => toggleMember(user.id)}
-                      className={`w-full flex items-center gap-3 p-3 rounded-xl transition-all ${
-                        isSelected
-                          ? "bg-primary/10 ring-1 ring-primary"
-                          : "bg-card hover:bg-secondary"
-                      }`}
-                      whileTap={{ scale: 0.98 }}
-                    >
-                      <div
-                        className={`w-12 h-12 rounded-full ${user.color} flex items-center justify-center text-lg font-medium text-white`}
-                      >
-                        {user.name.charAt(0)}
-                      </div>
-                      <div className="flex-1 text-left">
-                        <div className="font-medium">{user.name}</div>
-                        <div className="text-sm text-muted-foreground">
-                          @{user.name.toLowerCase().replace(" ", "")}
-                        </div>
-                      </div>
-                      <div
-                        className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-colors ${
+                {isSearching ? (
+                  <div className="flex justify-center py-4">
+                    <Loader2 className="w-6 h-6 animate-spin text-primary" />
+                  </div>
+                ) : searchedUsers?.length === 0 ? (
+                  <p className="text-center py-4 text-sm text-muted-foreground">No friends found</p>
+                ) : (
+                  searchedUsers?.map((user) => {
+                    const isSelected = selectedMembers.some(m => m._id === user._id)
+                    return (
+                      <motion.button
+                        key={user._id}
+                        onClick={() => toggleMember(user)}
+                        className={`w-full flex items-center gap-3 p-3 rounded-xl transition-all ${
                           isSelected
-                            ? "bg-primary border-primary"
-                            : "border-muted-foreground"
+                            ? "bg-primary/10 ring-1 ring-primary"
+                            : "bg-card hover:bg-secondary"
                         }`}
+                        whileTap={{ scale: 0.98 }}
                       >
-                        {isSelected && <Check className="w-4 h-4 text-primary-foreground" />}
-                      </div>
-                    </motion.button>
-                  )
-                })}
+                        <div
+                          className={`w-12 h-12 rounded-full ${user.color || 'bg-primary'} flex items-center justify-center text-lg font-medium text-white`}
+                        >
+                          {user.name.charAt(0)}
+                        </div>
+                        <div className="flex-1 text-left">
+                          <div className="font-medium">{user.name}</div>
+                          <div className="text-sm text-muted-foreground">
+                            {user.email}
+                          </div>
+                        </div>
+                        <div
+                          className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-colors ${
+                            isSelected
+                              ? "bg-primary border-primary"
+                              : "border-muted-foreground"
+                          }`}
+                        >
+                          {isSelected && <Check className="w-4 h-4 text-primary-foreground" />}
+                        </div>
+                      </motion.button>
+                    )
+                  })
+                )}
               </div>
 
               {/* Invite New */}

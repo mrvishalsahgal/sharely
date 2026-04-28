@@ -14,7 +14,9 @@ import {
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { groups, users } from "@/lib/mock-data"
+import useSWR from "swr"
+import { fetcher } from "@/lib/fetcher"
+import { Loader2 } from "lucide-react"
 
 interface AddMembersViewProps {
   groupId: string
@@ -23,36 +25,48 @@ interface AddMembersViewProps {
 }
 
 export function AddMembersView({ groupId, onBack, onInviteFriend }: AddMembersViewProps) {
-  const group = groups.find((g) => g.id === groupId) || groups[0]
-
+  const { data: group, isLoading: groupLoading } = useSWR<any>(`/api/groups/${groupId}`, fetcher)
   const [searchQuery, setSearchQuery] = useState("")
-  const [selectedMembers, setSelectedMembers] = useState<string[]>([])
+  const [selectedMembers, setSelectedMembers] = useState<any[]>([])
   const [isAdding, setIsAdding] = useState(false)
   const [linkCopied, setLinkCopied] = useState(false)
 
-  const existingMemberIds = group.members.map((m) => m.id)
-  const availableUsers = users.filter(
-    (u) => u.id !== "current" && !existingMemberIds.includes(u.id)
-  )
-  const filteredUsers = availableUsers.filter((u) =>
-    u.name.toLowerCase().includes(searchQuery.toLowerCase())
+  const { data: searchedUsers, isLoading: isSearching } = useSWR<any[]>(
+    searchQuery ? `/api/users?q=${searchQuery}` : null,
+    fetcher
   )
 
-  const toggleMember = (userId: string) => {
+  const existingMemberIds = group?.members?.map((m: any) => m._id) || []
+  
+  const toggleMember = (user: any) => {
     setSelectedMembers((prev) =>
-      prev.includes(userId)
-        ? prev.filter((id) => id !== userId)
-        : [...prev, userId]
+      prev.find(m => m._id === user._id)
+        ? prev.filter((m) => m._id !== user._id)
+        : [...prev, user]
     )
   }
 
   const handleAdd = async () => {
     setIsAdding(true)
-    await new Promise((resolve) => setTimeout(resolve, 1000))
-    onBack()
+    try {
+      const response = await fetch(`/api/groups/${groupId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          memberIds: [...existingMemberIds, ...selectedMembers.map(m => m._id)]
+        })
+      })
+
+      if (!response.ok) throw new Error("Failed to add members")
+      onBack()
+    } catch (error) {
+      console.error("Add members error:", error)
+      setIsAdding(false)
+    }
   }
 
   const copyInviteLink = () => {
+    if (!group?.id) return
     navigator.clipboard.writeText(`https://splitsmart.app/invite/${group.id}`)
     setLinkCopied(true)
     setTimeout(() => setLinkCopied(false), 2000)
@@ -72,7 +86,7 @@ export function AddMembersView({ groupId, onBack, onInviteFriend }: AddMembersVi
             </button>
             <div>
               <h1 className="text-lg font-semibold">Add Members</h1>
-              <p className="text-sm text-muted-foreground">{group.name}</p>
+              <p className="text-sm text-muted-foreground">{group?.name}</p>
             </div>
           </div>
           {selectedMembers.length > 0 && (
@@ -160,7 +174,11 @@ export function AddMembersView({ groupId, onBack, onInviteFriend }: AddMembersVi
             Your Friends
           </h2>
 
-          {filteredUsers.length === 0 ? (
+          {groupLoading || isSearching ? (
+            <div className="flex justify-center py-12">
+              <Loader2 className="w-8 h-8 animate-spin text-primary" />
+            </div>
+          ) : searchedUsers?.length === 0 ? (
             <div className="text-center py-12">
               <div className="w-16 h-16 rounded-full bg-card flex items-center justify-center mx-auto mb-4">
                 <UserPlus className="w-8 h-8 text-muted-foreground" />
@@ -175,12 +193,16 @@ export function AddMembersView({ groupId, onBack, onInviteFriend }: AddMembersVi
               </Button>
             </div>
           ) : (
-            filteredUsers.map((user) => {
-              const isSelected = selectedMembers.includes(user.id)
+            searchedUsers?.map((user) => {
+              const isSelected = selectedMembers.some(m => m._id === user._id)
+              const isAlreadyMember = existingMemberIds.includes(user._id)
+              
+              if (isAlreadyMember) return null
+
               return (
                 <motion.button
-                  key={user.id}
-                  onClick={() => toggleMember(user.id)}
+                  key={user._id}
+                  onClick={() => toggleMember(user)}
                   className={`w-full flex items-center gap-3 p-3 rounded-xl transition-all ${
                     isSelected
                       ? "bg-primary/10 ring-1 ring-primary"
@@ -189,14 +211,14 @@ export function AddMembersView({ groupId, onBack, onInviteFriend }: AddMembersVi
                   whileTap={{ scale: 0.98 }}
                 >
                   <div
-                    className={`w-12 h-12 rounded-full ${user.color} flex items-center justify-center text-lg font-medium text-white`}
+                    className={`w-12 h-12 rounded-full ${user.color || 'bg-primary'} flex items-center justify-center text-lg font-medium text-white`}
                   >
                     {user.name.charAt(0)}
                   </div>
                   <div className="flex-1 text-left">
                     <div className="font-medium">{user.name}</div>
                     <div className="text-sm text-muted-foreground">
-                      @{user.name.toLowerCase().replace(" ", "")}
+                      {user.email}
                     </div>
                   </div>
                   <div

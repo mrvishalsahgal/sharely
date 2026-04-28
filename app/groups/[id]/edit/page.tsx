@@ -120,7 +120,7 @@ export default function EditGroupPage() {
         >
           <div className="flex items-center justify-between">
             <label className="text-sm font-medium">
-              Members ({group.members.length})
+              Members ({group?.members?.length || 0})
             </label>
             <Link
               href={`/groups/${group.id}/members/add`}
@@ -132,26 +132,26 @@ export default function EditGroupPage() {
           </div>
 
           <div className="bg-card rounded-2xl border border-border overflow-hidden">
-            {group.members.map((member, index) => (
+            {group?.members?.map((member: any, index: number) => (
               <div key={member.id}>
                 {index > 0 && <div className="h-px bg-border mx-4" />}
                 <div className="flex items-center justify-between p-4">
                   <div className="flex items-center gap-3">
                     <div
-                      className={`w-10 h-10 rounded-full ${member.color} flex items-center justify-center text-white font-medium`}
+                      className={`w-10 h-10 rounded-full ${member?.color || 'bg-primary'} flex items-center justify-center text-white font-medium`}
                     >
-                      {member.name.charAt(0)}
+                      {(member?.name || '?').charAt(0).toUpperCase()}
                     </div>
                     <div>
                       <div className="font-medium">
-                        {member.id === "current" ? "You" : member.name}
+                        {member?.id === "current" ? "You" : (member?.name || 'Unknown')}
                       </div>
-                      {member.id === "current" && (
+                      {member?.id === "current" && (
                         <div className="text-xs text-primary">Admin</div>
                       )}
                     </div>
                   </div>
-                  {member.id !== "current" && (
+                  {member?.id !== "current" && (
                     <button className="p-2 text-muted-foreground hover:text-negative hover:bg-negative/10 rounded-lg transition-colors">
                       <UserMinus className="w-4 h-4" />
                     </button>

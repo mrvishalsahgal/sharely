@@ -2,7 +2,16 @@
 
 import { motion } from 'framer-motion'
 import { Sparkles, TrendingUp, Receipt, Crown, Heart } from 'lucide-react'
-import { weeklyStats } from '@/lib/mock-data'
+
+const weeklyStats = {
+  totalSpent: 450.00,
+  totalOwed: 120.50,
+  totalOwing: 45.00,
+  biggestSpender: { name: 'You' },
+  mostGenerous: { name: 'Sarah' },
+  expenseCount: 12,
+  settledCount: 8
+}
 
 export function WeeklySummary() {
   const stats = [

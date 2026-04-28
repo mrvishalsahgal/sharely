@@ -1,6 +1,5 @@
 "use client"
 
-import { useState } from "react"
 import { motion } from "framer-motion"
 import {
   ArrowLeft,
@@ -11,9 +10,11 @@ import {
   Filter,
   TrendingUp,
   TrendingDown,
+  Loader2,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { users, groups } from "@/lib/mock-data"
+import useSWR from 'swr'
+import { fetcher } from '@/lib/fetcher'
 
 interface Activity {
   id: string
@@ -22,74 +23,12 @@ interface Activity {
   description: string
   amount?: number
   isPositive?: boolean
-  user: typeof users[0]
-  group?: typeof groups[0]
+  user: any
+  group?: any
   timestamp: Date
 }
 
-const activities: Activity[] = [
-  {
-    id: "1",
-    type: "expense",
-    title: "Grocery run at Whole Foods",
-    description: "You owe Alex Chen",
-    amount: 39.1,
-    isPositive: false,
-    user: users[1],
-    group: groups[0],
-    timestamp: new Date(Date.now() - 1000 * 60 * 30),
-  },
-  {
-    id: "2",
-    type: "payment",
-    title: "Sarah Kim settled up",
-    description: "Paid you for Netflix subscription",
-    amount: 5.75,
-    isPositive: true,
-    user: users[2],
-    group: groups[0],
-    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 2),
-  },
-  {
-    id: "3",
-    type: "expense",
-    title: "Dinner at Nobu",
-    description: "You paid for the group",
-    amount: 245,
-    isPositive: true,
-    user: users[0],
-    group: groups[0],
-    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24),
-  },
-  {
-    id: "4",
-    type: "group_join",
-    title: "James Lee joined",
-    description: "Road Trip Gang",
-    user: users[5],
-    group: groups[1],
-    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 48),
-  },
-  {
-    id: "5",
-    type: "payment",
-    title: "You settled up",
-    description: "Paid Mike Ross",
-    amount: 42,
-    isPositive: false,
-    user: users[3],
-    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 72),
-  },
-  {
-    id: "6",
-    type: "group_create",
-    title: "Work Lunches created",
-    description: "You created a new group",
-    user: users[0],
-    group: groups[2],
-    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 96),
-  },
-]
+const activitiesMock: Activity[] = []
 
 const filters = [
   { id: "all", label: "All" },
@@ -102,8 +41,37 @@ interface ActivityViewProps {
   onBack: () => void
 }
 
+import { useState } from "react"
+
 export function ActivityView({ onBack }: ActivityViewProps) {
   const [activeFilter, setActiveFilter] = useState("all")
+  const { data: activitiesData, isLoading } = useSWR<any[]>('/api/activity', fetcher)
+
+  const activities = (activitiesData || []).map(a => {
+    if (a.type === 'expense') {
+      return {
+        id: a.id,
+        type: 'expense',
+        title: a.title,
+        description: `Paid by ${a.paidBy.name}`,
+        amount: a.amount,
+        isPositive: false, // We'll need current user context to determine this properly
+        user: a.paidBy,
+        timestamp: new Date(a.date),
+      }
+    } else {
+      return {
+        id: a.id,
+        type: 'payment',
+        title: 'Settled up',
+        description: `${a.fromUser.name} paid ${a.toUser.name}`,
+        amount: a.amount,
+        isPositive: true,
+        user: a.fromUser,
+        timestamp: new Date(a.date),
+      }
+    }
+  }) as Activity[]
 
   const filteredActivities = activities.filter((activity) => {
     if (activeFilter === "all") return true
@@ -113,6 +81,15 @@ export function ActivityView({ onBack }: ActivityViewProps) {
       return activity.type === "group_join" || activity.type === "group_create"
     return true
   })
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        <p className="text-muted-foreground mt-4">Loading activity history...</p>
+      </div>
+    )
+  }
 
   const formatTime = (date: Date) => {
     const diff = Date.now() - date.getTime()

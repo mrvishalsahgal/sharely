@@ -3,11 +3,11 @@
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { ChevronDown, Check } from 'lucide-react'
-import type { Expense, User } from '@/lib/mock-data'
-import { currentUser } from '@/lib/mock-data'
+import type { Expense, User } from '@/lib/types'
+import { useSession } from 'next-auth/react'
 
 interface ExpenseBubbleProps {
-  expense: Expense
+  expense: any // Using any for now to avoid deep type issues
   index: number
   onReact: (expenseId: string, emoji: string) => void
 }
@@ -15,19 +15,20 @@ interface ExpenseBubbleProps {
 const reactionEmojis = ['👍', '😂', '💸', '😋', '🔥']
 
 export function ExpenseBubble({ expense, index, onReact }: ExpenseBubbleProps) {
+  const { data: session } = useSession()
+  const currentUserId = session?.user?.id
   const [isExpanded, setIsExpanded] = useState(false)
   const [showReactions, setShowReactions] = useState(false)
   
-  const isPaidByMe = expense.paidBy.id === currentUser.id
-  const myShare = expense.splitWith.find(s => s.user.id === currentUser.id)
+  const payer = expense.paidBy
+  const isPaidByMe = (payer?._id || payer?.id) === currentUserId
+  const myShare = expense.splits?.find((s: any) => (s.user?._id || s.user?.id) === currentUserId)
   
-  const timeAgo = getTimeAgo(expense.timestamp)
+  const timeAgo = expense.createdAt ? getTimeAgo(new Date(expense.createdAt)) : 'recently'
   
-  const payerInitials = expense.paidBy.name
-    .split(' ')
-    .map(n => n[0])
-    .join('')
-    .toUpperCase()
+  const payerInitials = payer?.name
+    ? payer.name.split(' ').map((n: string) => n[0]).join('').toUpperCase()
+    : '??'
 
   return (
     <motion.div
@@ -37,7 +38,7 @@ export function ExpenseBubble({ expense, index, onReact }: ExpenseBubbleProps) {
       className={`flex gap-3 ${isPaidByMe ? 'flex-row-reverse' : ''}`}
     >
       {/* Avatar */}
-      <div className={`flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center text-sm font-semibold ${expense.paidBy.color} text-primary-foreground`}>
+      <div className={`flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center text-sm font-semibold ${expense?.paidBy?.color || 'bg-primary'} text-primary-foreground`}>
         {payerInitials}
       </div>
 
@@ -57,14 +58,14 @@ export function ExpenseBubble({ expense, index, onReact }: ExpenseBubbleProps) {
             <div className="flex items-center gap-2">
               <span className="text-2xl">{expense.emoji}</span>
               <div>
-                <p className="font-medium">{expense.description}</p>
+                <p className="font-medium">{expense?.description || expense?.title || 'Expense'}</p>
                 <p className="text-xs text-muted-foreground">
-                  {expense.paidBy.name} paid • {timeAgo}
+                  {expense?.paidBy?.name || 'Someone'} paid • {timeAgo}
                 </p>
               </div>
             </div>
             <div className="text-right">
-              <p className="text-lg font-bold">${expense.amount.toFixed(2)}</p>
+              <p className="text-lg font-bold">${(expense?.amount || 0).toFixed(2)}</p>
               {myShare && !isPaidByMe && (
                 <p className={`text-xs ${myShare.settled ? 'text-positive' : 'text-negative'}`}>
                   {myShare.settled ? 'Paid' : `You owe $${myShare.amount.toFixed(2)}`}
@@ -84,7 +85,7 @@ export function ExpenseBubble({ expense, index, onReact }: ExpenseBubbleProps) {
             >
               <ChevronDown className="w-4 h-4" />
             </motion.div>
-            <span>Split {expense.splitWith.length + 1} ways</span>
+            <span>Split {(expense.splits?.length || 0)} ways</span>
           </button>
 
           {/* Split breakdown */}
@@ -97,20 +98,13 @@ export function ExpenseBubble({ expense, index, onReact }: ExpenseBubbleProps) {
                 className="overflow-hidden"
               >
                 <div className="mt-3 pt-3 border-t border-border/50 space-y-2">
-                  {/* Payer */}
-                  <SplitRow
-                    user={expense.paidBy}
-                    amount={expense.amount / (expense.splitWith.length + 1)}
-                    isPayer
-                    settled
-                  />
-                  {/* Others */}
-                  {expense.splitWith.map(split => (
+                  {expense.splits?.map((split: any) => (
                     <SplitRow
-                      key={split.user.id}
+                      key={split.user?._id || split.user?.id}
                       user={split.user}
-                      amount={split.amount}
-                      settled={split.settled}
+                      amount={split.amountOwed}
+                      settled={split.hasSettled}
+                      isPayer={(split.user?._id || split.user?.id) === (payer?._id || payer?.id)}
                     />
                   ))}
                 </div>
@@ -121,7 +115,7 @@ export function ExpenseBubble({ expense, index, onReact }: ExpenseBubbleProps) {
           {/* Reactions */}
           {expense.reactions.length > 0 && (
             <div className="flex flex-wrap gap-1 mt-3">
-              {expense.reactions.map((reaction, i) => (
+              {expense.reactions.map((reaction: any, i: number) => (
                 <motion.button
                   key={i}
                   whileHover={{ scale: 1.1 }}
@@ -174,24 +168,22 @@ function SplitRow({
   isPayer = false, 
   settled 
 }: { 
-  user: User
+  user: any
   amount: number
   isPayer?: boolean
   settled: boolean
 }) {
-  const initials = user.name
-    .split(' ')
-    .map(n => n[0])
-    .join('')
-    .toUpperCase()
+  const initials = user?.name
+    ? user.name.split(' ').map((n: string) => n[0]).join('').toUpperCase()
+    : '??'
 
   return (
     <div className="flex items-center justify-between">
       <div className="flex items-center gap-2">
-        <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-semibold ${user.color} text-primary-foreground`}>
+        <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-semibold ${user?.color || 'bg-primary'} text-primary-foreground`}>
           {initials}
         </div>
-        <span className="text-sm">{user.name}</span>
+        <span className="text-sm">{user?.name || 'Unknown'}</span>
         {isPayer && (
           <span className="text-xs px-2 py-0.5 rounded-full bg-positive/20 text-positive">
             paid

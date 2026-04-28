@@ -22,61 +22,12 @@ interface Notification {
   title: string
   message: string
   read: boolean
-  user: typeof users[0]
+  user: any
   timestamp: Date
   actionUrl?: string
 }
 
-const notifications: Notification[] = [
-  {
-    id: "1",
-    type: "expense_added",
-    title: "New expense added",
-    message: "Alex Chen added \"Grocery run at Whole Foods\" - you owe $39.10",
-    read: false,
-    user: users[1],
-    timestamp: new Date(Date.now() - 1000 * 60 * 30),
-    actionUrl: "/",
-  },
-  {
-    id: "2",
-    type: "payment_received",
-    title: "Payment received",
-    message: "Sarah Kim paid you $5.75 for Netflix subscription",
-    read: false,
-    user: users[2],
-    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 2),
-  },
-  {
-    id: "3",
-    type: "payment_reminder",
-    title: "Friendly reminder",
-    message: "You owe Mike Ross $42.00 - it's been a week!",
-    read: false,
-    user: users[3],
-    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24),
-    actionUrl: "/",
-  },
-  {
-    id: "4",
-    type: "friend_request",
-    title: "Friend request",
-    message: "James Lee wants to connect with you",
-    read: true,
-    user: users[5],
-    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 48),
-    actionUrl: "/friends",
-  },
-  {
-    id: "5",
-    type: "group_invite",
-    title: "Group invitation",
-    message: "Emma Davis invited you to join \"Weekend Brunch Crew\"",
-    read: true,
-    user: users[4],
-    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 72),
-  },
-]
+const notifications: Notification[] = []
 
 export default function NotificationsPage() {
   const [notificationList, setNotificationList] = useState(notifications)

@@ -4,9 +4,10 @@ import { useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { motion } from "framer-motion"
-import { Eye, EyeOff, Mail, Lock, User, ArrowRight, Check } from "lucide-react"
+import { Eye, EyeOff, Mail, Lock, User, ArrowRight, Check, AlertCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { signIn } from "next-auth/react"
 
 export default function SignupPage() {
   const router = useRouter()
@@ -22,11 +23,43 @@ export default function SignupPage() {
     { text: "One number", met: /\d/.test(password) },
   ]
 
+  const [error, setError] = useState("")
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
-    await new Promise((resolve) => setTimeout(resolve, 1500))
-    router.push("/")
+    setError("")
+
+    try {
+      const response = await fetch("/api/auth/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, email, password }),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || "Something went wrong")
+      }
+
+      // Auto login after signup
+      const result = await signIn("credentials", {
+        email,
+        password,
+        redirect: false,
+      })
+
+      if (result?.error) {
+        router.push("/login?message=Account created. Please sign in.")
+      } else {
+        router.push("/")
+        router.refresh()
+      }
+    } catch (err: any) {
+      setError(err.message)
+      setIsLoading(false)
+    }
   }
 
   return (
@@ -54,6 +87,17 @@ export default function SignupPage() {
               Start splitting expenses with friends
             </p>
           </div>
+
+          {error && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="mb-6 p-4 rounded-xl bg-negative/10 border border-negative/20 flex items-center gap-3 text-negative"
+            >
+              <AlertCircle className="w-5 h-5 shrink-0" />
+              <p className="text-sm font-medium">{error}</p>
+            </motion.div>
+          )}
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">

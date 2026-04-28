@@ -2,11 +2,12 @@
 
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ArrowLeft, Plus, Users, Settings, PieChart, MoreHorizontal, Edit2, BellOff, LogOut } from 'lucide-react'
+import { ArrowLeft, Plus, Users, Settings, PieChart, MoreHorizontal, Edit2, BellOff, LogOut, Loader2 } from 'lucide-react'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
+import useSWR from 'swr'
+import { fetcher } from '@/lib/fetcher'
 import { ExpenseBubble } from './expense-bubble'
-import type { Group, Expense } from '@/lib/mock-data'
-import { expenses as allExpenses } from '@/lib/mock-data'
+import type { Group, Expense, Balance } from '@/lib/types'
 
 interface GroupSpaceProps {
   group: Group
@@ -16,30 +17,32 @@ interface GroupSpaceProps {
 }
 
 export function GroupSpace({ group, onBack, onAddExpense, onAddMembers }: GroupSpaceProps) {
-  const [expenses, setExpenses] = useState<Expense[]>(allExpenses)
   const [activeTab, setActiveTab] = useState<'expenses' | 'balances' | 'stats'>('expenses')
 
+  const { data: expensesData, isLoading: expensesLoading } = useSWR<any[]>(`/api/groups/${group.id}/expenses`, fetcher)
+  const { data: groupBalancesData, isLoading: balancesLoading } = useSWR<Balance[]>(`/api/groups/${group.id}/balances`, fetcher)
+
+  const expenses = (expensesData || []).map(e => ({
+    id: e._id,
+    title: e.title,
+    amount: e.amount,
+    paidBy: e.paidBy,
+    splits: e.splits.map((s: any) => ({
+      user: s.user,
+      amountOwed: s.amountOwed,
+      hasSettled: s.hasSettled
+    })),
+    category: e.category.toLowerCase(),
+    date: e.createdAt,
+    reactions: e.reactions || []
+  })) as any[] // Use any here temporarily if the type is still strictly mismatching
+
   const handleReact = (expenseId: string, emoji: string) => {
-    setExpenses(prev => prev.map(exp => {
-      if (exp.id !== expenseId) return exp
-      
-      const existingReaction = exp.reactions.find(r => r.emoji === emoji)
-      if (existingReaction) {
-        return {
-          ...exp,
-          reactions: exp.reactions.filter(r => r.emoji !== emoji)
-        }
-      }
-      
-      return {
-        ...exp,
-        reactions: [...exp.reactions, { emoji, users: [] }]
-      }
-    }))
+    // Optimistic update logic can be added here
   }
 
-  const isPositive = group.yourBalance > 0
-  const isNegative = group.yourBalance < 0
+  const isPositive = (group.userBalance || 0) > 0
+  const isNegative = (group.userBalance || 0) < 0
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -109,7 +112,7 @@ export function GroupSpace({ group, onBack, onAddExpense, onAddMembers }: GroupS
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             className={`p-3 rounded-xl ${
-              group.yourBalance === 0
+              (group.userBalance || 0) === 0
                 ? 'bg-secondary'
                 : isPositive
                   ? 'bg-positive/10'
@@ -119,7 +122,7 @@ export function GroupSpace({ group, onBack, onAddExpense, onAddMembers }: GroupS
             <div className="flex items-center justify-between">
               <span className="text-sm text-muted-foreground">Your balance in this group</span>
               <span className={`text-lg font-bold ${
-                group.yourBalance === 0
+                (group.userBalance || 0) === 0
                   ? 'text-muted-foreground'
                   : isPositive
                     ? 'text-positive'
@@ -127,7 +130,7 @@ export function GroupSpace({ group, onBack, onAddExpense, onAddMembers }: GroupS
               }`}>
                 {isPositive && '+'}
                 {isNegative && '-'}
-                ${Math.abs(group.yourBalance).toFixed(2)}
+                ${Math.abs(group.userBalance || 0).toFixed(2)}
               </span>
             </div>
           </motion.div>
@@ -256,12 +259,30 @@ export function GroupSpace({ group, onBack, onAddExpense, onAddMembers }: GroupS
 }
 
 function GroupBalances({ group }: { group: Group }) {
+  const { data: balances, isLoading } = useSWR<Balance[]>(`/api/groups/${group.id}/balances`, fetcher)
+
+  if (isLoading) {
+    return (
+      <div className="flex justify-center py-8">
+        <Loader2 className="w-6 h-6 animate-spin text-primary" />
+      </div>
+    )
+  }
+
+  if (!balances || balances.length === 0) {
+    return (
+      <div className="text-center py-8 text-muted-foreground">
+        Everyone is settled up!
+      </div>
+    )
+  }
+
   return (
     <div className="space-y-4">
       <h3 className="text-lg font-semibold mb-4">Who owes whom</h3>
-      {group.members.slice(1).map((member, index) => {
-        const owes = (Math.random() - 0.5) * 100
-        const initials = member.name
+      {balances.map((balance, index) => {
+        const owes = balance.amount
+        const initials = (balance.user?.name || '?')
           .split(' ')
           .map(n => n[0])
           .join('')
@@ -269,7 +290,7 @@ function GroupBalances({ group }: { group: Group }) {
 
         return (
           <motion.div
-            key={member.id}
+            key={balance.user.id}
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: index * 0.1 }}
@@ -277,11 +298,11 @@ function GroupBalances({ group }: { group: Group }) {
           >
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-semibold ${member.color} text-primary-foreground`}>
+                <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-semibold ${balance.user.color || 'bg-primary'} text-primary-foreground`}>
                   {initials}
                 </div>
                 <div>
-                  <p className="font-medium">{member.name}</p>
+                  <p className="font-medium">{balance.user?.name || 'Unknown'}</p>
                   <p className="text-xs text-muted-foreground">
                     {owes > 0 ? 'owes you' : 'you owe'}
                   </p>
@@ -316,7 +337,7 @@ function GroupStats({ group }: { group: Group }) {
         className="glass-card rounded-xl p-6 text-center"
       >
         <p className="text-sm text-muted-foreground mb-2">Total Group Spending</p>
-        <p className="text-4xl font-bold">${group.totalExpenses.toLocaleString()}</p>
+        <p className="text-4xl font-bold">${(group.totalExpenses || 0).toLocaleString()}</p>
       </motion.div>
 
       {/* Category breakdown */}

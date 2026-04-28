@@ -1,6 +1,5 @@
 "use client"
 
-import { useState } from "react"
 import { motion } from "framer-motion"
 import {
   ArrowLeft,
@@ -10,10 +9,12 @@ import {
   User,
   Check,
   Pencil,
+  Loader2,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { currentUser } from "@/lib/mock-data"
+import useSWR from 'swr'
+import { fetcher } from '@/lib/fetcher'
 
 interface ProfileViewProps {
   onBack: () => void
@@ -21,21 +22,57 @@ interface ProfileViewProps {
   onOpenActivity: () => void
 }
 
+import { useState, useEffect } from "react"
+
 export function ProfileView({ onBack, onOpenSettings, onOpenActivity }: ProfileViewProps) {
+  const { data: user, mutate, isLoading } = useSWR<any>('/api/users/me', fetcher)
   const [isEditing, setIsEditing] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
   const [profile, setProfile] = useState({
-    name: "John Doe",
-    email: "john@example.com",
-    phone: "+1 (555) 123-4567",
-    username: "johndoe",
+    name: "",
+    email: "",
+    phone: "",
+    username: "",
   })
+
+  useEffect(() => {
+    if (user) {
+      setProfile({
+        name: user.name || "",
+        email: user.email || "",
+        phone: user.phone || "",
+        username: user.email?.split('@')[0] || "",
+      })
+    }
+  }, [user])
 
   const handleSave = async () => {
     setIsSaving(true)
-    await new Promise((resolve) => setTimeout(resolve, 1000))
-    setIsSaving(false)
-    setIsEditing(false)
+    try {
+      await fetch('/api/users/me', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: profile.name,
+          phone: profile.phone
+        })
+      })
+      mutate()
+      setIsEditing(false)
+    } catch (error) {
+      console.error('Failed to save profile', error)
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        <p className="text-muted-foreground mt-4">Loading profile...</p>
+      </div>
+    )
   }
 
   const stats = [
