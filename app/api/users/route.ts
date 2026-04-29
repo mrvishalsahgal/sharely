@@ -12,17 +12,17 @@ export async function GET(request: Request) {
 
   try {
     await connectDB()
-    const users = await User.find({
-      $and: [
-        { _id: { $ne: session.user.id } },
-        {
-          $or: [
-            { name: { $regex: query || '', $options: 'i' } },
-            { email: { $regex: query || '', $options: 'i' } }
-          ]
-        }
+    
+    let filter: any = { _id: { $ne: session.user.id } }
+    
+    if (query) {
+      filter.$or = [
+        { name: { $regex: query, $options: 'i' } },
+        { email: { $regex: query, $options: 'i' } }
       ]
-    }).limit(10).select('name email avatar color')
+    }
+
+    const users = await User.find(filter).limit(10).select('name email avatar color')
 
     return NextResponse.json(users)
   } catch (error) {

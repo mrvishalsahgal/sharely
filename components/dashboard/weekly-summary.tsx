@@ -17,19 +17,19 @@ export function WeeklySummary() {
   const stats = [
     {
       label: 'Total Spent',
-      value: `$${weeklyStats.totalSpent.toFixed(2)}`,
+      value: `$${(weeklyStats.totalSpent ?? 0).toFixed(2)}`,
       icon: Receipt,
       color: 'text-chart-1'
     },
     {
       label: 'You\'re Owed',
-      value: `$${weeklyStats.totalOwed.toFixed(2)}`,
+      value: `$${(weeklyStats.totalOwed ?? 0).toFixed(2)}`,
       icon: TrendingUp,
       color: 'text-positive'
     },
     {
       label: 'You Owe',
-      value: `$${weeklyStats.totalOwing.toFixed(2)}`,
+      value: `$${(weeklyStats.totalOwing ?? 0).toFixed(2)}`,
       icon: TrendingUp,
       color: 'text-negative',
       rotate: true
@@ -81,7 +81,7 @@ export function WeeklySummary() {
           <Crown className="w-5 h-5 text-chart-4" />
           <div>
             <p className="text-sm font-medium">Biggest Spender</p>
-            <p className="text-xs text-muted-foreground">{weeklyStats.biggestSpender.name} dropped ${(weeklyStats.totalSpent * 0.4).toFixed(2)}</p>
+            <p className="text-xs text-muted-foreground">{weeklyStats.biggestSpender.name} dropped ${((weeklyStats.totalSpent ?? 0) * 0.4).toFixed(2)}</p>
           </div>
         </motion.div>
 

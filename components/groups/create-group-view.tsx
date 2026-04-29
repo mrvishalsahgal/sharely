@@ -45,7 +45,7 @@ export function CreateGroupView({ onBack, onComplete, onInviteFriend }: CreateGr
   const [isCreating, setIsCreating] = useState(false)
 
   const { data: searchedUsers, isLoading: isSearching } = useSWR<any[]>(
-    searchQuery ? `/api/users?q=${searchQuery}` : null,
+    `/api/users?q=${searchQuery}`,
     fetcher
   )
 

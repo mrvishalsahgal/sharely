@@ -77,7 +77,7 @@ export function BalanceCard({ balance, index, onSettle }: BalanceCardProps) {
                 ? 'text-positive' 
                 : 'text-negative'
           }`}>
-            ${Math.abs(amount).toFixed(2)}
+            ${Math.abs(amount ?? 0).toFixed(2)}
           </span>
         </div>
       </div>

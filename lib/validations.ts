@@ -13,7 +13,11 @@ export const expenseSchema = z.object({
   category: z.string().default('other'),
   groupId: z.string().optional().nullable(),
   splitWith: z.array(z.string()).min(1, 'Select at least one person to split with'),
-  paidBy: z.string().optional()
+  paidBy: z.string().optional(),
+  splits: z.array(z.object({
+    userId: z.string(),
+    amount: z.number()
+  })).optional()
 })
 
 export const settlementSchema = z.object({

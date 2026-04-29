@@ -3,6 +3,7 @@ import { auth } from '@/auth'
 import { connectDB } from '@/lib/mongodb'
 import Group from '@/lib/models/Group'
 import { groupSchema } from '@/lib/validations'
+import { calculateGroupSummaries } from '@/lib/balances'
 
 export async function GET() {
   const session = await auth()
@@ -10,10 +11,22 @@ export async function GET() {
 
   await connectDB()
   const groups = await Group.find({ members: session.user.id })
-    .populate('members', 'name email avatar')
+    .populate('members', 'name email avatar color')
     .sort({ updatedAt: -1 })
 
-  return NextResponse.json(groups)
+  const summaries = await calculateGroupSummaries(session.user.id)
+
+  const enrichedGroups = groups.map(group => {
+    const summary = summaries[group._id.toString()] || { totalExpenses: 0, userBalance: 0 }
+    return {
+      ...group.toObject(),
+      id: group._id.toString(),
+      totalExpenses: summary.totalExpenses,
+      userBalance: summary.userBalance
+    }
+  })
+
+  return NextResponse.json(enrichedGroups)
 }
 
 export async function POST(request: Request) {

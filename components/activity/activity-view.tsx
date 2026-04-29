@@ -196,7 +196,7 @@ export function ActivityView({ onBack }: ActivityViewProps) {
                           ) : (
                             <TrendingDown className="w-4 h-4" />
                           )}
-                          ${activity.amount.toFixed(2)}
+                          ${(activity.amount ?? 0).toFixed(2)}
                         </div>
                       )}
                     </div>

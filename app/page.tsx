@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { AnimatePresence } from 'framer-motion'
+import { useSWRConfig } from 'swr'
 import { Dashboard } from '@/components/dashboard/dashboard'
 import { GroupSpace } from '@/components/group/group-space'
 import { SettingsView } from '@/components/settings/settings-view'
@@ -18,6 +19,7 @@ import type { Group, Balance } from '@/lib/types'
 type View = 'dashboard' | 'group' | 'settings' | 'notifications' | 'create-group' | 'add-members' | 'activity' | 'profile' | 'invite'
 
 export default function Home() {
+  const { mutate } = useSWRConfig()
   const [view, setView] = useState<View>('dashboard')
   const [selectedGroup, setSelectedGroup] = useState<Group | null>(null)
   const [selectedBalance, setSelectedBalance] = useState<Balance | null>(null)
@@ -42,12 +44,23 @@ export default function Home() {
 
   const handleAddExpense = (expense: any) => {
     console.log('New expense:', expense)
-    // In a real app, this would update the state/database
+    // Revalidate relevant data
+    mutate('/api/groups')
+    mutate('/api/users/me/balances')
+    if (expense.groupId) {
+      mutate(`/api/groups/${expense.groupId}/expenses`)
+      mutate(`/api/groups/${expense.groupId}/balances`)
+    }
   }
 
   const handleSettleComplete = () => {
     console.log('Settled:', selectedBalance)
-    // In a real app, this would update the state/database
+    // Revalidate balances
+    mutate('/api/users/me/balances')
+    mutate('/api/groups')
+    if (selectedGroup) {
+      mutate(`/api/groups/${selectedGroup._id || selectedGroup.id}/balances`)
+    }
     setSelectedBalance(null)
   }
 
@@ -74,7 +87,15 @@ export default function Home() {
         ) : view === 'notifications' ? (
           <NotificationsView key="notifications" onBack={() => setView('dashboard')} />
         ) : view === 'create-group' ? (
-          <CreateGroupView key="create-group" onBack={() => setView('dashboard')} onComplete={() => setView('dashboard')} onInviteFriend={() => setView('invite')} />
+          <CreateGroupView 
+            key="create-group" 
+            onBack={() => setView('dashboard')} 
+            onComplete={() => {
+              mutate('/api/groups')
+              setView('dashboard')
+            }} 
+            onInviteFriend={() => setView('invite')} 
+          />
         ) : view === 'add-members' && selectedGroup ? (
           <AddMembersView key="add-members" groupId={selectedGroup._id || selectedGroup.id} onBack={() => setView('group')} onInviteFriend={() => setView('invite')} />
         ) : selectedGroup ? (

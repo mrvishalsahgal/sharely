@@ -50,7 +50,7 @@ export function GroupCard({ group, index, onClick }: GroupCardProps) {
               <h3 className="font-semibold text-lg">{group.name}</h3>
               <div className="flex items-center gap-1 text-muted-foreground text-sm">
                 <Users className="w-4 h-4" />
-                <span>{group.members.length} members</span>
+                <span>{(group.members?.length || 0)} members</span>
               </div>
             </div>
           </div>
@@ -76,18 +76,18 @@ export function GroupCard({ group, index, onClick }: GroupCardProps) {
             }`}>
               {isPositive && '+'}
               {isNegative && '-'}
-              ${Math.abs(balance).toFixed(2)}
+              ${Math.abs(balance ?? 0).toFixed(2)}
             </p>
           </div>
           <div className="text-right">
             <p className="text-xs text-muted-foreground uppercase tracking-wide">Total Spent</p>
-            <p className="text-xl font-bold">${(group.totalExpenses || 0).toLocaleString()}</p>
+            <p className="text-xl font-bold">${(group.totalExpenses || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
           </div>
         </div>
 
         {/* Member avatars */}
         <div className="flex items-center mt-4 -space-x-2">
-          {group.members.slice(0, 4).map((member, i) => {
+          {(group.members || []).slice(0, 4).map((member, i) => {
             const initials = member.name
               .split(' ')
               .map(n => n[0])
@@ -105,9 +105,9 @@ export function GroupCard({ group, index, onClick }: GroupCardProps) {
               </motion.div>
             )
           })}
-          {group.members.length > 4 && (
+          {(group.members?.length || 0) > 4 && (
             <div className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center text-xs font-medium border-2 border-background">
-              +{group.members.length - 4}
+              +{(group.members?.length || 0) - 4}
             </div>
           )}
         </div>

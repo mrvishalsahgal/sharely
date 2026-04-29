@@ -65,10 +65,10 @@ export function ExpenseBubble({ expense, index, onReact }: ExpenseBubbleProps) {
               </div>
             </div>
             <div className="text-right">
-              <p className="text-lg font-bold">${(expense?.amount || 0).toFixed(2)}</p>
-              {myShare && !isPaidByMe && (
-                <p className={`text-xs ${myShare.settled ? 'text-positive' : 'text-negative'}`}>
-                  {myShare.settled ? 'Paid' : `You owe $${myShare.amount.toFixed(2)}`}
+              <p className="text-lg font-bold">${(expense?.amount ?? 0).toFixed(2)}</p>
+              {myShare && !isPaidByMe && myShare.amountOwed > 0 && (
+                <p className={`text-xs ${myShare.hasSettled ? 'text-positive' : 'text-negative'}`}>
+                  {myShare.hasSettled ? 'Paid' : `You owe $${myShare.amountOwed.toFixed(2)}`}
                 </p>
               )}
             </div>
@@ -113,7 +113,7 @@ export function ExpenseBubble({ expense, index, onReact }: ExpenseBubbleProps) {
           </AnimatePresence>
 
           {/* Reactions */}
-          {expense.reactions.length > 0 && (
+          {(expense?.reactions || []).length > 0 && (
             <div className="flex flex-wrap gap-1 mt-3">
               {expense.reactions.map((reaction: any, i: number) => (
                 <motion.button
@@ -124,7 +124,7 @@ export function ExpenseBubble({ expense, index, onReact }: ExpenseBubbleProps) {
                   className="flex items-center gap-1 px-2 py-1 rounded-full bg-secondary/80 text-sm hover:bg-secondary transition-colors"
                 >
                   <span>{reaction.emoji}</span>
-                  <span className="text-xs text-muted-foreground">{reaction.users.length}</span>
+                  <span className="text-xs text-muted-foreground">{reaction.users?.length || 0}</span>
                 </motion.button>
               ))}
             </div>
@@ -192,7 +192,7 @@ function SplitRow({
       </div>
       <div className="flex items-center gap-2">
         <span className={`text-sm font-medium ${settled ? 'text-positive' : 'text-muted-foreground'}`}>
-          ${amount.toFixed(2)}
+          ${(amount ?? 0).toFixed(2)}
         </span>
         {settled && !isPayer && (
           <Check className="w-4 h-4 text-positive" />

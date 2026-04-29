@@ -86,3 +86,78 @@ export async function calculateUserBalances(userId: string, groupId?: string) {
 
   return balances
 }
+
+export async function calculateGroupSummaries(userId: string) {
+  await connectDB()
+  const userObjId = new mongoose.Types.ObjectId(userId)
+
+  // 1. Get total expenses for each group
+  const groupTotals = await Expense.aggregate([
+    { $group: { _id: '$groupId', total: { $sum: '$amount' } } }
+  ])
+
+  // 2. Get user's balance for each group
+  // This is more complex because calculateUserBalances is per-group
+  // Let's do a simplified aggregation here for all groups
+  
+  // What others owe me (per group)
+  const theyOweMe = await Expense.aggregate([
+    { $match: { paidBy: userObjId } },
+    { $unwind: '$splits' },
+    { $match: { 'splits.user': { $ne: userObjId } } },
+    { $group: { _id: '$groupId', amount: { $sum: '$splits.amountOwed' } } }
+  ])
+
+  // What I owe others (per group)
+  const iOweThem = await Expense.aggregate([
+    { $match: { 'splits.user': userObjId, paidBy: { $ne: userObjId } } },
+    { $unwind: '$splits' },
+    { $match: { 'splits.user': userObjId } },
+    { $group: { _id: '$groupId', amount: { $sum: '$splits.amountOwed' } } }
+  ])
+
+  // Settlements received (per group)
+  const settlementsReceived = await Settlement.aggregate([
+    { $match: { toUser: userObjId, status: 'completed' } },
+    { $group: { _id: '$groupId', amount: { $sum: '$amount' } } }
+  ])
+
+  // Settlements paid (per group)
+  const settlementsPaid = await Settlement.aggregate([
+    { $match: { fromUser: userObjId, status: 'completed' } },
+    { $group: { _id: '$groupId', amount: { $sum: '$amount' } } }
+  ])
+
+  const summaries: Record<string, { totalExpenses: number; userBalance: number }> = {}
+
+  groupTotals.forEach(item => {
+    const gid = item._id?.toString() || 'personal'
+    summaries[gid] = { totalExpenses: item.total, userBalance: 0 }
+  })
+
+  theyOweMe.forEach(item => {
+    const gid = item._id?.toString() || 'personal'
+    if (!summaries[gid]) summaries[gid] = { totalExpenses: 0, userBalance: 0 }
+    summaries[gid].userBalance += item.amount
+  })
+
+  iOweThem.forEach(item => {
+    const gid = item._id?.toString() || 'personal'
+    if (!summaries[gid]) summaries[gid] = { totalExpenses: 0, userBalance: 0 }
+    summaries[gid].userBalance -= item.amount
+  })
+
+  settlementsReceived.forEach(item => {
+    const gid = item._id?.toString() || 'personal'
+    if (!summaries[gid]) summaries[gid] = { totalExpenses: 0, userBalance: 0 }
+    summaries[gid].userBalance -= item.amount
+  })
+
+  settlementsPaid.forEach(item => {
+    const gid = item._id?.toString() || 'personal'
+    if (!summaries[gid]) summaries[gid] = { totalExpenses: 0, userBalance: 0 }
+    summaries[gid].userBalance += item.amount
+  })
+
+  return summaries
+}

@@ -115,7 +115,7 @@ export function AnimatedBalance({ amount, showPulse = true }: AnimatedBalancePro
             initial={{ opacity: 0.8 }}
             animate={{ opacity: 1 }}
           >
-            {Math.abs(displayAmount).toFixed(2)}
+            {(Math.abs(displayAmount ?? 0)).toFixed(2)}
           </motion.span>
         </span>
       </motion.div>

@@ -32,7 +32,7 @@ export function AddMembersView({ groupId, onBack, onInviteFriend }: AddMembersVi
   const [linkCopied, setLinkCopied] = useState(false)
 
   const { data: searchedUsers, isLoading: isSearching } = useSWR<any[]>(
-    searchQuery ? `/api/users?q=${searchQuery}` : null,
+    `/api/users?q=${searchQuery}`,
     fetcher
   )
 
@@ -53,7 +53,7 @@ export function AddMembersView({ groupId, onBack, onInviteFriend }: AddMembersVi
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          memberIds: [...existingMemberIds, ...selectedMembers.map(m => m._id)]
+          members: [...existingMemberIds, ...selectedMembers.map(m => m._id)]
         })
       })
 
@@ -147,20 +147,53 @@ export function AddMembersView({ groupId, onBack, onInviteFriend }: AddMembersVi
           </div>
         </motion.div>
 
+        {/* Existing Members */}
+        {group?.members && group.members.length > 0 && (
+          <div className="space-y-2">
+            <h2 className="text-sm font-medium text-muted-foreground px-1">
+              Group Members ({group.members.length})
+            </h2>
+            <div className="grid grid-cols-1 gap-2">
+              {group.members.map((member: any) => (
+                <div 
+                  key={member._id} 
+                  className="flex items-center gap-3 p-3 rounded-xl bg-secondary/30 border border-border/50"
+                >
+                  <div className={`w-10 h-10 rounded-full ${member.color || 'bg-primary'} flex items-center justify-center text-sm font-medium text-white`}>
+                    {(member.name || '?').charAt(0).toUpperCase()}
+                  </div>
+                  <div className="flex-1">
+                    <div className="font-medium text-sm">{member.name}</div>
+                    <div className="text-xs text-muted-foreground">{member.email}</div>
+                  </div>
+                  <div className="text-xs px-2 py-1 rounded-md bg-secondary text-muted-foreground">
+                    Member
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Search */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
-          className="relative"
+          className="relative pt-4"
         >
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-          <Input
-            placeholder="Search friends..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10 h-12 bg-card border-border"
-          />
+          <h2 className="text-sm font-medium text-muted-foreground px-1 mb-2">
+            Add New Members
+          </h2>
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+            <Input
+              placeholder="Search friends..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10 h-12 bg-card border-border"
+            />
+          </div>
         </motion.div>
 
         {/* User List */}

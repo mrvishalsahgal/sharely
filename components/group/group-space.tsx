@@ -2,11 +2,12 @@
 
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ArrowLeft, Plus, Users, Settings, PieChart, MoreHorizontal, Edit2, BellOff, LogOut, Loader2 } from 'lucide-react'
+import { ArrowLeft, Plus, Users, Settings, PieChart, MoreHorizontal, Edit2, BellOff, LogOut, Loader2, ChevronRight } from 'lucide-react'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
-import useSWR from 'swr'
+import useSWR, { useSWRConfig } from 'swr'
 import { fetcher } from '@/lib/fetcher'
 import { ExpenseBubble } from './expense-bubble'
+import { ConfirmModal } from '@/components/ui/confirm-modal'
 import type { Group, Expense, Balance } from '@/lib/types'
 
 interface GroupSpaceProps {
@@ -18,6 +19,8 @@ interface GroupSpaceProps {
 
 export function GroupSpace({ group, onBack, onAddExpense, onAddMembers }: GroupSpaceProps) {
   const [activeTab, setActiveTab] = useState<'expenses' | 'balances' | 'stats'>('expenses')
+  const [showLeaveConfirm, setShowLeaveConfirm] = useState(false)
+  const [isLeaving, setIsLeaving] = useState(false)
 
   const { data: expensesData, isLoading: expensesLoading } = useSWR<any[]>(`/api/groups/${group.id}/expenses`, fetcher)
   const { data: groupBalancesData, isLoading: balancesLoading } = useSWR<Balance[]>(`/api/groups/${group.id}/balances`, fetcher)
@@ -34,11 +37,32 @@ export function GroupSpace({ group, onBack, onAddExpense, onAddMembers }: GroupS
     })),
     category: e.category.toLowerCase(),
     date: e.createdAt,
-    reactions: e.reactions || []
-  })) as any[] // Use any here temporarily if the type is still strictly mismatching
+    reactions: (e.reactions || []).reduce((acc: any[], curr: any) => {
+      const existing = acc.find(r => r.emoji === curr.emoji)
+      if (existing) {
+        existing.users.push(curr.user)
+      } else {
+        acc.push({ emoji: curr.emoji, users: [curr.user] })
+      }
+      return acc
+    }, [])
+  })) as any[] 
 
-  const handleReact = (expenseId: string, emoji: string) => {
-    // Optimistic update logic can be added here
+  const { mutate } = useSWRConfig()
+
+  const handleReact = async (expenseId: string, emoji: string) => {
+    try {
+      const response = await fetch(`/api/expenses/${expenseId}/react`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ emoji })
+      })
+      if (response.ok) {
+        mutate(`/api/groups/${group.id}/expenses`)
+      }
+    } catch (error) {
+      console.error('Reaction error:', error)
+    }
   }
 
   const isPositive = (group.userBalance || 0) > 0
@@ -66,7 +90,13 @@ export function GroupSpace({ group, onBack, onAddExpense, onAddMembers }: GroupS
                 </div>
                 <div>
                   <h1 className="font-semibold">{group.name}</h1>
-                  <p className="text-xs text-muted-foreground">{group.members.length} members</p>
+                  <button 
+                    onClick={onAddMembers}
+                    className="text-xs text-muted-foreground hover:text-primary transition-colors flex items-center gap-1"
+                  >
+                    {group.members?.length || 0} members
+                    <ChevronRight className="w-3 h-3" />
+                  </button>
                 </div>
               </div>
             </div>
@@ -98,7 +128,10 @@ export function GroupSpace({ group, onBack, onAddExpense, onAddMembers }: GroupS
                     <BellOff className="w-4 h-4 text-muted-foreground" />
                     <span>Mute Notifications</span>
                   </DropdownMenuItem>
-                  <DropdownMenuItem className="gap-2 cursor-pointer rounded-lg p-2 hover:bg-negative/20 text-negative focus:text-negative focus:bg-negative/20">
+                  <DropdownMenuItem 
+                    onClick={() => setShowLeaveConfirm(true)}
+                    className="gap-2 cursor-pointer rounded-lg p-2 hover:bg-negative/20 text-negative focus:text-negative focus:bg-negative/20"
+                  >
                     <LogOut className="w-4 h-4" />
                     <span>Leave Group</span>
                   </DropdownMenuItem>
@@ -130,7 +163,7 @@ export function GroupSpace({ group, onBack, onAddExpense, onAddMembers }: GroupS
               }`}>
                 {isPositive && '+'}
                 {isNegative && '-'}
-                ${Math.abs(group.userBalance || 0).toFixed(2)}
+                ${Math.abs(group.userBalance ?? 0).toFixed(2)}
               </span>
             </div>
           </motion.div>
@@ -167,53 +200,23 @@ export function GroupSpace({ group, onBack, onAddExpense, onAddMembers }: GroupS
               exit={{ opacity: 0, x: 20 }}
               className="space-y-4"
             >
-              {/* Date separator */}
-              <div className="flex items-center gap-3 py-2">
-                <div className="flex-1 h-px bg-border" />
-                <span className="text-xs text-muted-foreground">Today</span>
-                <div className="flex-1 h-px bg-border" />
-              </div>
+                  {expenses.map((expense, index) => (
+                    <ExpenseBubble
+                      key={expense.id}
+                      expense={expense}
+                      index={index}
+                      onReact={handleReact}
+                    />
+                  ))}
 
-              {expenses.slice(0, 2).map((expense, index) => (
-                <ExpenseBubble
-                  key={expense.id}
-                  expense={expense}
-                  index={index}
-                  onReact={handleReact}
-                />
-              ))}
-
-              {/* Date separator */}
-              <div className="flex items-center gap-3 py-2">
-                <div className="flex-1 h-px bg-border" />
-                <span className="text-xs text-muted-foreground">Yesterday</span>
-                <div className="flex-1 h-px bg-border" />
-              </div>
-
-              {expenses.slice(2, 4).map((expense, index) => (
-                <ExpenseBubble
-                  key={expense.id}
-                  expense={expense}
-                  index={index + 2}
-                  onReact={handleReact}
-                />
-              ))}
-
-              {/* Date separator */}
-              <div className="flex items-center gap-3 py-2">
-                <div className="flex-1 h-px bg-border" />
-                <span className="text-xs text-muted-foreground">Earlier this week</span>
-                <div className="flex-1 h-px bg-border" />
-              </div>
-
-              {expenses.slice(4).map((expense, index) => (
-                <ExpenseBubble
-                  key={expense.id}
-                  expense={expense}
-                  index={index + 4}
-                  onReact={handleReact}
-                />
-              ))}
+                  {expenses.length === 0 && !expensesLoading && (
+                    <div className="text-center py-12">
+                      <div className="w-16 h-16 rounded-full bg-secondary flex items-center justify-center mx-auto mb-4">
+                        <Plus className="w-8 h-8 text-muted-foreground" />
+                      </div>
+                      <p className="text-muted-foreground">No expenses yet. Add one to get started!</p>
+                    </div>
+                  )}
             </motion.div>
           )}
 
@@ -254,6 +257,32 @@ export function GroupSpace({ group, onBack, onAddExpense, onAddMembers }: GroupS
       >
         <Plus className="w-8 h-8" />
       </motion.button>
+
+      {/* Confirm Leave Modal */}
+      <ConfirmModal
+        isOpen={showLeaveConfirm}
+        onClose={() => setShowLeaveConfirm(false)}
+        onConfirm={async () => {
+          setIsLeaving(true)
+          try {
+            const response = await fetch(`/api/groups/${group.id}/leave`, { method: 'POST' })
+            if (response.ok) {
+              mutate('/api/groups')
+              onBack()
+            }
+          } catch (error) {
+            console.error('Leave group error:', error)
+          } finally {
+            setIsLeaving(false)
+            setShowLeaveConfirm(false)
+          }
+        }}
+        title="Leave Group?"
+        message={`Are you sure you want to leave ${group.name}? You will no longer be able to see expenses or balances.`}
+        confirmText="Leave Group"
+        variant="danger"
+        isLoading={isLeaving}
+      />
     </div>
   )
 }
@@ -309,7 +338,7 @@ function GroupBalances({ group }: { group: Group }) {
                 </div>
               </div>
               <span className={`text-lg font-bold ${owes > 0 ? 'text-positive' : 'text-negative'}`}>
-                ${Math.abs(owes).toFixed(2)}
+                ${Math.abs(owes ?? 0).toFixed(2)}
               </span>
             </div>
           </motion.div>
@@ -320,13 +349,20 @@ function GroupBalances({ group }: { group: Group }) {
 }
 
 function GroupStats({ group }: { group: Group }) {
-  const categories = [
-    { name: 'Food & Drinks', amount: 450, color: 'bg-chart-1', percent: 40 },
-    { name: 'Utilities', amount: 280, color: 'bg-chart-2', percent: 25 },
-    { name: 'Entertainment', amount: 180, color: 'bg-chart-3', percent: 16 },
-    { name: 'Transport', amount: 120, color: 'bg-chart-4', percent: 11 },
-    { name: 'Other', amount: 90, color: 'bg-chart-5', percent: 8 },
-  ]
+  const { data: statsData, isLoading } = useSWR<{ totalSpent: number; categories: any[] }>(
+    `/api/groups/${group.id}/stats`, 
+    fetcher
+  )
+
+  if (isLoading) {
+    return (
+      <div className="flex justify-center py-8">
+        <Loader2 className="w-6 h-6 animate-spin text-primary" />
+      </div>
+    )
+  }
+
+  const stats = statsData || { totalSpent: 0, categories: [] }
 
   return (
     <div className="space-y-6">
@@ -337,7 +373,7 @@ function GroupStats({ group }: { group: Group }) {
         className="glass-card rounded-xl p-6 text-center"
       >
         <p className="text-sm text-muted-foreground mb-2">Total Group Spending</p>
-        <p className="text-4xl font-bold">${(group.totalExpenses || 0).toLocaleString()}</p>
+        <p className="text-4xl font-bold">${(stats.totalSpent || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
       </motion.div>
 
       {/* Category breakdown */}
@@ -346,51 +382,33 @@ function GroupStats({ group }: { group: Group }) {
           <PieChart className="w-5 h-5 text-accent" />
           <h3 className="font-semibold">Spending by Category</h3>
         </div>
-        <div className="space-y-3">
-          {categories.map((cat, index) => (
-            <motion.div
-              key={cat.name}
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: index * 0.1 }}
-            >
-              <div className="flex items-center justify-between mb-1">
-                <span className="text-sm">{cat.name}</span>
-                <span className="text-sm font-medium">${cat.amount}</span>
-              </div>
-              <div className="h-2 bg-secondary rounded-full overflow-hidden">
-                <motion.div
-                  initial={{ width: 0 }}
-                  animate={{ width: `${cat.percent}%` }}
-                  transition={{ duration: 0.8, delay: index * 0.1 }}
-                  className={`h-full rounded-full ${cat.color}`}
-                />
-              </div>
-            </motion.div>
-          ))}
-        </div>
-      </div>
-
-      {/* Fun stats */}
-      <div className="grid grid-cols-2 gap-4">
-        <motion.div
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ delay: 0.5 }}
-          className="glass-card rounded-xl p-4 text-center"
-        >
-          <p className="text-3xl font-bold text-chart-1">12</p>
-          <p className="text-xs text-muted-foreground">Total Expenses</p>
-        </motion.div>
-        <motion.div
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ delay: 0.6 }}
-          className="glass-card rounded-xl p-4 text-center"
-        >
-          <p className="text-3xl font-bold text-positive">8</p>
-          <p className="text-xs text-muted-foreground">Settled</p>
-        </motion.div>
+        {(stats.categories?.length || 0) > 0 ? (
+          <div className="space-y-3">
+            {stats.categories.map((cat, index) => (
+              <motion.div
+                key={cat.name}
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: index * 0.1 }}
+              >
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-sm">{cat.name}</span>
+                  <span className="text-sm font-medium">${cat.amount.toFixed(2)}</span>
+                </div>
+                <div className="h-2 bg-secondary rounded-full overflow-hidden">
+                  <motion.div
+                    initial={{ width: 0 }}
+                    animate={{ width: `${cat.percent}%` }}
+                    transition={{ duration: 0.8, delay: index * 0.1 }}
+                    className={`h-full rounded-full ${cat.color}`}
+                  />
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        ) : (
+          <p className="text-center py-4 text-sm text-muted-foreground">No expenses yet</p>
+        )}
       </div>
     </div>
   )

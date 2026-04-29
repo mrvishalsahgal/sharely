@@ -40,13 +40,13 @@ export function Dashboard({
   
   const balances = balancesData || []
   const groups = (groupsData || []).map(g => ({
-    id: g._id,
+    id: g.id || g._id,
     name: g.name,
     emoji: g.emoji,
     type: g.type || 'home',
-    members: g.members,
-    totalExpenses: 0,
-    userBalance: 0
+    members: g.members || [],
+    totalExpenses: g.totalExpenses || 0,
+    userBalance: g.userBalance || 0
   })) as Group[]
 
   const netBalance = balances.reduce((sum, b) => sum + b.amount, 0)

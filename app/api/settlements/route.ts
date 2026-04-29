@@ -34,7 +34,7 @@ export async function POST(request: Request) {
     await Notification.create({
       userId: toUser,
       type: 'settled_up',
-      message: `${session.user.name} settled up $${amount.toFixed(2)} with you`,
+      message: `${session.user.name} settled up $${(amount ?? 0).toFixed(2)} with you`,
       fromUser: session.user.id,
       relatedGroupId: groupId,
     })

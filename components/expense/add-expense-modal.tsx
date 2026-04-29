@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { X, Check, Users, ChevronRight, Sparkles, User, ArrowLeft, Loader2 } from 'lucide-react'
+import { useSession } from 'next-auth/react'
 import useSWR from 'swr'
 import { fetcher } from '@/lib/fetcher'
 import { categories } from '@/lib/mock-data'
@@ -83,7 +84,13 @@ export function AddExpenseModal({ isOpen, onClose, onAdd, defaultGroupId }: AddE
           amount: parseFloat(amount),
           category: selectedCategory || 'other',
           groupId: selectedGroupId,
-          splitWith: selectedMembers
+          splitWith: selectedMembers,
+          splits: splitType === 'custom' 
+            ? Object.entries(customAmounts).map(([userId, amount]) => ({
+                userId,
+                amount: parseFloat(amount)
+              }))
+            : undefined
         })
       })
 
@@ -127,8 +134,9 @@ export function AddExpenseModal({ isOpen, onClose, onAdd, defaultGroupId }: AddE
   const remainingAmount = totalAmount - customTotal
   const isCustomSplitValid = splitType === 'equal' || Math.abs(remainingAmount) < 0.01
 
-  const equalSplitAmount = selectedMembers.length > 0 
-    ? totalAmount / (selectedMembers.length + 1) 
+  const splitCount = selectedMembers.length
+  const equalSplitAmount = splitCount > 0 
+    ? totalAmount / splitCount 
     : totalAmount
 
   const canProceed = () => {
@@ -275,25 +283,27 @@ export function AddExpenseModal({ isOpen, onClose, onAdd, defaultGroupId }: AddE
                     {splitType === 'equal' ? (
                       <div className="flex items-center justify-between text-sm">
                         <span className="text-muted-foreground">
-                          {selectedMembers.length + 1} people
+                          {selectedMembers.length} {selectedMembers.length === 1 ? 'person' : 'people'}
                         </span>
-                        <span className="font-semibold">${equalSplitAmount.toFixed(2)} each</span>
+                        <span className="font-bold">
+                          ${(equalSplitAmount ?? 0).toFixed(2)} each
+                        </span>
                       </div>
                     ) : (
                       <div className="space-y-1">
                         <div className="flex items-center justify-between text-sm">
                           <span className="text-muted-foreground">Others owe</span>
-                          <span className="font-medium">${customTotal.toFixed(2)}</span>
+                          <span className="font-medium">${(customTotal ?? 0).toFixed(2)}</span>
                         </div>
                         <div className="flex items-center justify-between text-sm">
                           <span className="text-muted-foreground">Your share</span>
                           <span className={`font-semibold ${remainingAmount < 0 ? 'text-negative' : 'text-positive'}`}>
-                            ${remainingAmount.toFixed(2)}
+                            ${(remainingAmount ?? 0).toFixed(2)}
                           </span>
                         </div>
                         {!isCustomSplitValid && remainingAmount < 0 && (
                           <p className="text-xs text-negative mt-1">
-                            Over by ${Math.abs(remainingAmount).toFixed(2)}
+                            Over by ${Math.abs(remainingAmount ?? 0).toFixed(2)}
                           </p>
                         )}
                       </div>
@@ -430,7 +440,7 @@ function Step0({
                     </div>
                     <div className="flex-1 text-left">
                       <p className="font-medium text-sm">{group.name}</p>
-                      <p className="text-xs text-muted-foreground">{group.members.length} members</p>
+                      <p className="text-xs text-muted-foreground">{(group.members?.length || 0)} members</p>
                     </div>
                     {isSelected && (
                       <motion.div
@@ -597,6 +607,9 @@ function Step3({
   isGroupMode: boolean
   remainingAmount: number
 }) {
+  const { data: session } = useSession()
+  const currentUserId = session?.user?.id
+
   const toggleMember = (id: string) => {
     if (selectedMembers.includes(id)) {
       setSelectedMembers(selectedMembers.filter(m => m !== id))
@@ -616,7 +629,7 @@ function Step3({
     const perPerson = amount / (selectedMembers.length + 1)
     const newAmounts: CustomSplitAmounts = {}
     selectedMembers.forEach(id => {
-      newAmounts[id] = perPerson.toFixed(2)
+      newAmounts[id] = (perPerson ?? 0).toFixed(2)
     })
     setCustomAmounts(newAmounts)
   }
@@ -652,7 +665,7 @@ function Step3({
       {!isGroupMode && (
         <motion.button
           whileTap={{ scale: 0.98 }}
-          onClick={() => setSelectedMembers(users.map(u => u._id || u.id))}
+          onClick={() => setSelectedMembers((users || []).map(u => u._id || u.id))}
           className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-accent/10 text-accent text-sm font-medium"
         >
           <Sparkles className="w-4 h-4" />
@@ -661,12 +674,12 @@ function Step3({
       )}
 
       {/* Custom split helper */}
-      {splitType === 'custom' && selectedMembers.length > 0 && (
+      {splitType === 'custom' && (selectedMembers?.length || 0) > 0 && (
         <button
           onClick={distributeEqually}
           className="w-full text-center text-xs text-primary hover:underline"
         >
-          Distribute ${amount.toFixed(2)} equally
+          Distribute ${(amount ?? 0).toFixed(2)} equally
         </button>
       )}
 
@@ -695,9 +708,11 @@ function Step3({
                 <div className={`w-9 h-9 rounded-full flex items-center justify-center text-xs font-semibold ${user.color || 'bg-primary'} text-primary-foreground`}>
                   {initials}
                 </div>
-                <span className="flex-1 text-left font-medium text-sm">{user.name}</span>
+                <span className="flex-1 text-left font-medium text-sm">
+                  {userId === currentUserId ? 'You' : user.name}
+                </span>
                 {splitType === 'equal' && isSelected && (
-                  <span className="text-xs text-muted-foreground">${equalSplitAmount.toFixed(2)}</span>
+                  <span className="text-xs text-muted-foreground">${(equalSplitAmount ?? 0).toFixed(2)}</span>
                 )}
                 <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${
                   isSelected ? 'bg-primary border-primary' : 'border-muted-foreground/30'
@@ -754,7 +769,7 @@ function SuccessAnimation({ amount, splitCount }: { amount: number; splitCount: 
           className="absolute inset-0 flex items-center justify-center"
         >
           <div className="w-20 h-20 rounded-full bg-gradient-to-br from-chart-4 to-chart-5 flex items-center justify-center text-2xl font-bold">
-            ${amount.toFixed(0)}
+            ${(amount ?? 0).toFixed(0)}
           </div>
         </motion.div>
 
@@ -773,7 +788,7 @@ function SuccessAnimation({ amount, splitCount }: { amount: number; splitCount: 
               className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2"
             >
               <div className="w-12 h-12 rounded-full bg-gradient-to-br from-positive to-accent flex items-center justify-center text-xs font-bold text-primary-foreground">
-                ${splitAmount.toFixed(0)}
+                ${(splitAmount ?? 0).toFixed(0)}
               </div>
             </motion.div>
           )
@@ -796,7 +811,7 @@ function SuccessAnimation({ amount, splitCount }: { amount: number; splitCount: 
         </motion.div>
         <h3 className="text-xl font-bold mb-1">Expense Added!</h3>
         <p className="text-sm text-muted-foreground">
-          Split ${amount.toFixed(2)} with {splitCount - 1} {splitCount === 2 ? 'person' : 'people'}
+          Split ${(amount ?? 0).toFixed(2)} with {splitCount - 1} {splitCount === 2 ? 'person' : 'people'}
         </p>
       </motion.div>
     </motion.div>
