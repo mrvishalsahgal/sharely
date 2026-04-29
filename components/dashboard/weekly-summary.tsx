@@ -1,49 +1,56 @@
-'use client'
-
 import { motion } from 'framer-motion'
-import { Sparkles, TrendingUp, Receipt, Crown, Heart } from 'lucide-react'
-
-const weeklyStats = {
-  totalSpent: 450.00,
-  totalOwed: 120.50,
-  totalOwing: 45.00,
-  biggestSpender: { name: 'You' },
-  mostGenerous: { name: 'Sarah' },
-  expenseCount: 12,
-  settledCount: 8
-}
+import { Sparkles, TrendingUp, Receipt, Crown, Heart, Loader2 } from 'lucide-react'
+import useSWR from 'swr'
+import { fetcher } from '@/lib/fetcher'
 
 export function WeeklySummary() {
-  const stats = [
+  const { data: stats, isLoading, error } = useSWR('/api/users/me/weekly-summary', fetcher)
+
+  if (isLoading) {
+    return (
+      <div className="glass-card rounded-2xl p-8 flex flex-col items-center justify-center gap-3">
+        <Loader2 className="w-6 h-6 animate-spin text-primary" />
+        <p className="text-sm text-muted-foreground">Calculating your weekly stats...</p>
+      </div>
+    )
+  }
+
+  if (error || !stats) return null
+
+  const displayStats = [
     {
       label: 'Total Spent',
-      value: `$${(weeklyStats.totalSpent ?? 0).toFixed(2)}`,
+      value: `$${(stats.totalSpent ?? 0).toFixed(2)}`,
       icon: Receipt,
       color: 'text-chart-1'
     },
     {
       label: 'You\'re Owed',
-      value: `$${(weeklyStats.totalOwed ?? 0).toFixed(2)}`,
+      value: `$${(stats.totalOwed ?? 0).toFixed(2)}`,
       icon: TrendingUp,
       color: 'text-positive'
     },
     {
       label: 'You Owe',
-      value: `$${(weeklyStats.totalOwing ?? 0).toFixed(2)}`,
+      value: `$${(stats.totalOwing ?? 0).toFixed(2)}`,
       icon: TrendingUp,
       color: 'text-negative',
       rotate: true
     },
   ]
 
+  const settlementProgress = stats.expenseCount > 0 
+    ? Math.round((stats.settledCount / stats.expenseCount) * 100) 
+    : 0
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      className="glass-card rounded-2xl p-6 relative overflow-hidden"
+      className="glass-card rounded-2xl p-6 relative overflow-hidden shadow-lg border-primary/10"
     >
       {/* Background decoration */}
-      <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-bl from-accent/20 to-transparent rounded-bl-full" />
+      <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-bl from-accent/10 to-transparent rounded-bl-full" />
       
       {/* Header */}
       <div className="flex items-center gap-2 mb-6">
@@ -53,7 +60,7 @@ export function WeeklySummary() {
 
       {/* Stats grid */}
       <div className="grid grid-cols-3 gap-4 mb-6">
-        {stats.map((stat, index) => (
+        {displayStats.map((stat, index) => (
           <motion.div
             key={stat.label}
             initial={{ opacity: 0, y: 10 }}
@@ -61,11 +68,11 @@ export function WeeklySummary() {
             transition={{ delay: index * 0.1 }}
             className="text-center"
           >
-            <div className={`inline-flex p-2 rounded-xl bg-secondary mb-2 ${stat.color}`}>
+            <div className={`inline-flex p-2 rounded-xl bg-secondary/50 mb-2 ${stat.color}`}>
               <stat.icon className={`w-5 h-5 ${stat.rotate ? 'rotate-180' : ''}`} />
             </div>
-            <p className="text-2xl font-bold">{stat.value}</p>
-            <p className="text-xs text-muted-foreground">{stat.label}</p>
+            <p className="text-xl font-bold truncate px-1">{stat.value}</p>
+            <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium">{stat.label}</p>
           </motion.div>
         ))}
       </div>
@@ -76,12 +83,14 @@ export function WeeklySummary() {
           initial={{ opacity: 0, x: -10 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ delay: 0.4 }}
-          className="flex items-center gap-3 p-3 rounded-xl bg-secondary/50"
+          className="flex items-center gap-3 p-3 rounded-xl bg-secondary/30"
         >
           <Crown className="w-5 h-5 text-chart-4" />
-          <div>
+          <div className="flex-1 min-w-0">
             <p className="text-sm font-medium">Biggest Spender</p>
-            <p className="text-xs text-muted-foreground">{weeklyStats.biggestSpender.name} dropped ${((weeklyStats.totalSpent ?? 0) * 0.4).toFixed(2)}</p>
+            <p className="text-xs text-muted-foreground truncate">
+              {stats.biggestSpender?.name || 'You'} dropped ${ (stats.biggestSpender?.amount || 0).toFixed(2) }
+            </p>
           </div>
         </motion.div>
 
@@ -89,12 +98,14 @@ export function WeeklySummary() {
           initial={{ opacity: 0, x: -10 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ delay: 0.5 }}
-          className="flex items-center gap-3 p-3 rounded-xl bg-secondary/50"
+          className="flex items-center gap-3 p-3 rounded-xl bg-secondary/30"
         >
           <Heart className="w-5 h-5 text-negative" />
-          <div>
+          <div className="flex-1 min-w-0">
             <p className="text-sm font-medium">Most Generous</p>
-            <p className="text-xs text-muted-foreground">{weeklyStats.mostGenerous.name} covered {weeklyStats.expenseCount - 3} expenses</p>
+            <p className="text-xs text-muted-foreground truncate">
+              {stats.mostGenerous?.name || 'None'} covered {stats.mostGenerous?.count || 0} expenses
+            </p>
           </div>
         </motion.div>
       </div>
@@ -102,15 +113,19 @@ export function WeeklySummary() {
       {/* Progress to settlement */}
       <div className="mt-4 pt-4 border-t border-border/50">
         <div className="flex items-center justify-between mb-2">
-          <span className="text-sm text-muted-foreground">Settlement Progress</span>
-          <span className="text-sm font-medium">{Math.round((weeklyStats.settledCount / weeklyStats.expenseCount) * 100)}%</span>
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Settlement Progress</span>
+            <div className="w-1 h-1 rounded-full bg-muted-foreground/30" />
+            <span className="text-xs text-muted-foreground">{stats.settledCount}/{stats.expenseCount} done</span>
+          </div>
+          <span className="text-sm font-bold text-primary">{settlementProgress}%</span>
         </div>
-        <div className="h-2 bg-secondary rounded-full overflow-hidden">
+        <div className="h-2.5 bg-secondary rounded-full overflow-hidden p-0.5 border border-border/20">
           <motion.div
             initial={{ width: 0 }}
-            animate={{ width: `${(weeklyStats.settledCount / weeklyStats.expenseCount) * 100}%` }}
-            transition={{ duration: 1, ease: "easeOut" }}
-            className="h-full bg-gradient-to-r from-positive to-accent rounded-full"
+            animate={{ width: `${settlementProgress}%` }}
+            transition={{ duration: 1.5, ease: "easeOut" }}
+            className="h-full bg-gradient-to-r from-positive via-accent to-primary rounded-full shadow-[0_0_10px_rgba(34,197,94,0.3)]"
           />
         </div>
       </div>
