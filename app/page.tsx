@@ -11,12 +11,13 @@ import { CreateGroupView } from '@/components/groups/create-group-view'
 import { AddMembersView } from '@/components/groups/add-members-view'
 import { ActivityView } from '@/components/activity/activity-view'
 import { ProfileView } from '@/components/profile/profile-view'
+import { PeopleView } from '@/components/friends/people-view'
 import { InviteView } from '@/components/friends/invite-view'
 import { AddExpenseModal } from '@/components/expense/add-expense-modal'
 import { SettleModal } from '@/components/settle/settle-modal'
 import type { Group, Balance } from '@/lib/types'
 
-type View = 'dashboard' | 'group' | 'settings' | 'notifications' | 'create-group' | 'add-members' | 'activity' | 'profile' | 'invite'
+type View = 'dashboard' | 'group' | 'settings' | 'notifications' | 'create-group' | 'add-members' | 'activity' | 'profile' | 'invite' | 'people'
 
 export default function Home() {
   const { mutate } = useSWRConfig()
@@ -81,6 +82,7 @@ export default function Home() {
             onCreateGroup={() => setView('create-group')}
             onOpenProfile={() => setView('profile')}
             onOpenActivity={() => setView('activity')}
+            onOpenPeople={() => setView('people')}
           />
         ) : view === 'settings' ? (
           <SettingsView key="settings" onBack={() => setView('dashboard')} />
@@ -115,6 +117,8 @@ export default function Home() {
           <ProfileView key="profile" onBack={() => setView('dashboard')} onOpenSettings={() => setView('settings')} onOpenActivity={() => setView('activity')} />
         ) : view === 'invite' ? (
           <InviteView key="invite" onBack={() => setView(selectedGroup ? 'add-members' : 'create-group')} />
+        ) : view === 'people' ? (
+          <PeopleView key="people" onBack={() => setView('dashboard')} />
         ) : null}
       </AnimatePresence>
 

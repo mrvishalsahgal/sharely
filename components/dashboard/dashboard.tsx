@@ -21,6 +21,7 @@ interface DashboardProps {
   onCreateGroup: () => void
   onOpenProfile: () => void
   onOpenActivity: () => void
+  onOpenPeople: () => void
 }
 
 export function Dashboard({ 
@@ -31,7 +32,8 @@ export function Dashboard({
   onOpenNotifications,
   onCreateGroup,
   onOpenProfile,
-  onOpenActivity
+  onOpenActivity,
+  onOpenPeople
 }: DashboardProps) {
   const [showNotification, setShowNotification] = useState(true)
 
@@ -163,7 +165,10 @@ export function Dashboard({
         <section className="mb-8">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-semibold">People</h2>
-            <button className="text-sm text-primary hover:text-primary/80 transition-colors">
+            <button 
+              onClick={onOpenPeople}
+              className="text-sm text-primary hover:text-primary/80 transition-colors"
+            >
               See all
             </button>
           </div>
