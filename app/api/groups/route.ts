@@ -52,6 +52,13 @@ export async function POST(request: Request) {
       createdBy: session.user.id,
     })
 
+    // Add members to creator's friends list
+    if (memberIds && memberIds.length > 0) {
+      await User.findByIdAndUpdate(session.user.id, {
+        $addToSet: { friends: { $each: memberIds } }
+      })
+    }
+
     return NextResponse.json(group, { status: 201 })
   } catch (error) {
     console.error('Error creating group:', error)

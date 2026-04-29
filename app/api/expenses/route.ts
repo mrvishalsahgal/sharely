@@ -27,11 +27,26 @@ export async function POST(request: Request) {
 
     if (customSplits && customSplits.length > 0) {
       // Use custom splits
+      const totalCustomAmount = customSplits.reduce((sum: number, s: any) => sum + s.amount, 0)
+      
       finalSplits = customSplits.map((s: any) => ({
         user: s.userId,
-        amountOwed: s.userId === userId ? 0 : s.amount,
+        amountOwed: s.amount,
         hasSettled: s.userId === userId,
       }))
+
+      // If payer's share wasn't explicitly included, or the total doesn't match,
+      // the payer absorbs the difference
+      const payerSplit = finalSplits.find(s => s.user.toString() === userId)
+      if (!payerSplit) {
+        finalSplits.push({
+          user: userId,
+          amountOwed: Math.max(0, amount - totalCustomAmount),
+          hasSettled: true
+        })
+      } else {
+        payerSplit.amountOwed += (amount - totalCustomAmount)
+      }
     } else {
       // Calculate split amounts (equal split)
       const splitUsers = Array.from(new Set(splitWith || []))

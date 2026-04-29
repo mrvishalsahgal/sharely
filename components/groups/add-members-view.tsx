@@ -204,7 +204,7 @@ export function AddMembersView({ groupId, onBack, onInviteFriend }: AddMembersVi
           className="space-y-2"
         >
           <h2 className="text-sm font-medium text-muted-foreground px-1">
-            Your Friends
+            {searchQuery ? "Search Results" : "Your Friends"}
           </h2>
 
           {groupLoading || isSearching ? (
@@ -221,9 +221,6 @@ export function AddMembersView({ groupId, onBack, onInviteFriend }: AddMembersVi
                   ? "No friends found matching your search"
                   : "All your friends are already in this group"}
               </p>
-              <Button variant="outline" onClick={onInviteFriend}>
-                Invite New Friend
-              </Button>
             </div>
           ) : (
             searchedUsers?.map((user) => {

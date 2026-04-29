@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { auth } from '@/auth'
 import { connectDB } from '@/lib/mongodb'
 import Group from '@/lib/models/Group'
+import User from '@/lib/models/User'
 
 export async function GET(
   request: Request,
@@ -43,6 +44,13 @@ export async function PATCH(
     )
 
     if (!group) return NextResponse.json({ error: 'Group not found' }, { status: 404 })
+
+    // Add new members to current user's friends list if members were updated
+    if (body.members && Array.isArray(body.members)) {
+      await User.findByIdAndUpdate(session.user.id, {
+        $addToSet: { friends: { $each: body.members.filter((m: string) => m !== session.user.id) } }
+      })
+    }
 
     return NextResponse.json(group)
   } catch (error) {

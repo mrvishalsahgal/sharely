@@ -230,7 +230,12 @@ export function AddExpenseModal({ isOpen, onClose, onAdd, defaultGroupId }: AddE
             <div className="flex-1 overflow-y-auto px-5 py-4">
               <AnimatePresence mode="wait">
                 {showSuccess ? (
-                  <SuccessAnimation amount={totalAmount} splitCount={selectedMembers.length + 1} />
+                  <SuccessAnimation 
+                    amount={totalAmount} 
+                    splitCount={selectedMembers.length} 
+                    splitType={splitType}
+                    customAmounts={customAmounts}
+                  />
                 ) : step === 0 ? (
                   <Step0
                     expenseType={expenseType}
@@ -751,8 +756,19 @@ function Step3({
 }
 
 // Success animation
-function SuccessAnimation({ amount, splitCount }: { amount: number; splitCount: number }) {
-  const splitAmount = amount / splitCount
+function SuccessAnimation({ 
+  amount, 
+  splitCount, 
+  splitType, 
+  customAmounts 
+}: { 
+  amount: number; 
+  splitCount: number;
+  splitType: 'equal' | 'custom';
+  customAmounts: CustomSplitAmounts;
+}) {
+  const { data: session } = useSession()
+  const currentUserId = session?.user?.id
 
   return (
     <motion.div
@@ -774,10 +790,10 @@ function SuccessAnimation({ amount, splitCount }: { amount: number; splitCount: 
         </motion.div>
 
         {/* Split coins */}
-        {Array.from({ length: splitCount }).map((_, i) => {
-          const angle = (i / splitCount) * Math.PI * 2 - Math.PI / 2
-          const x = Math.cos(angle) * 50
-          const y = Math.sin(angle) * 50
+        {Array.from({ length: Math.min(splitCount, 8) }).map((_, i) => {
+          const angle = (i / Math.min(splitCount, 8)) * Math.PI * 2 - Math.PI / 2
+          const x = Math.cos(angle) * 60
+          const y = Math.sin(angle) * 60
 
           return (
             <motion.div
@@ -787,8 +803,8 @@ function SuccessAnimation({ amount, splitCount }: { amount: number; splitCount: 
               transition={{ delay: 0.4 + i * 0.08, type: 'spring' }}
               className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2"
             >
-              <div className="w-12 h-12 rounded-full bg-gradient-to-br from-positive to-accent flex items-center justify-center text-xs font-bold text-primary-foreground">
-                ${(splitAmount ?? 0).toFixed(0)}
+              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-positive to-accent flex items-center justify-center text-[10px] font-bold text-primary-foreground shadow-lg">
+                {splitType === 'equal' ? `$${(amount / splitCount).toFixed(0)}` : '•'}
               </div>
             </motion.div>
           )
@@ -811,7 +827,10 @@ function SuccessAnimation({ amount, splitCount }: { amount: number; splitCount: 
         </motion.div>
         <h3 className="text-xl font-bold mb-1">Expense Added!</h3>
         <p className="text-sm text-muted-foreground">
-          Split ${(amount ?? 0).toFixed(2)} with {splitCount - 1} {splitCount === 2 ? 'person' : 'people'}
+          {splitType === 'equal' 
+            ? `Split $${amount.toFixed(2)} with ${splitCount - 1} ${splitCount === 2 ? 'person' : 'people'} ($${(amount/splitCount).toFixed(2)} each)`
+            : `Split $${amount.toFixed(2)} with ${splitCount - 1} ${splitCount === 2 ? 'person' : 'people'}`
+          }
         </p>
       </motion.div>
     </motion.div>

@@ -13,18 +13,20 @@ export async function GET(request: Request) {
   try {
     await connectDB()
     
-    let filter: any = { _id: { $ne: session.user.id } }
-    
     if (query) {
-      filter.$or = [
-        { name: { $regex: query, $options: 'i' } },
-        { email: { $regex: query, $options: 'i' } }
-      ]
+      const filter: any = { 
+        _id: { $ne: session.user.id },
+        $or: [
+          { name: { $regex: query, $options: 'i' } },
+          { email: { $regex: query, $options: 'i' } }
+        ]
+      }
+      const users = await User.find(filter).limit(10).select('name email avatar color')
+      return NextResponse.json(users)
+    } else {
+      const currentUser = await User.findById(session.user.id).populate('friends', 'name email avatar color')
+      return NextResponse.json(currentUser?.friends || [])
     }
-
-    const users = await User.find(filter).limit(10).select('name email avatar color')
-
-    return NextResponse.json(users)
   } catch (error) {
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 })
   }

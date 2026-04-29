@@ -251,6 +251,9 @@ export function CreateGroupView({ onBack, onComplete, onInviteFriend }: CreateGr
 
               {/* User List */}
               <div className="space-y-2">
+                <h2 className="text-sm font-medium text-muted-foreground px-1 mb-2">
+                  {searchQuery ? "Search Results" : "Your Friends"}
+                </h2>
                 {isSearching ? (
                   <div className="flex justify-center py-4">
                     <Loader2 className="w-6 h-6 animate-spin text-primary" />
