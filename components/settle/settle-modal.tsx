@@ -54,8 +54,9 @@ export function SettleModal({ isOpen, balance, onClose, onSettle }: SettleModalP
         body: JSON.stringify({
           toUser: balance.user.id,
           amount: finalAmount,
-          method: 'cash', // Default for now
-          // groupId: group.id, // If we have group context
+          method: 'cash',
+          isReminder: isOwed,
+          // groupId: group.id,
         })
       })
 

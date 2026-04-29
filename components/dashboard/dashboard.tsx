@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Plus, Bell, Settings, Search, User, Activity, Loader2 } from 'lucide-react'
+import { Plus, Bell, Settings, Search, User, Activity, Loader2, Archive, ChevronDown, ChevronUp } from 'lucide-react'
 import useSWR from 'swr'
 import { fetcher } from '@/lib/fetcher'
 import { AnimatedBalance } from './animated-balance'
@@ -35,11 +35,13 @@ export function Dashboard({
   onOpenActivity,
   onOpenPeople
 }: DashboardProps) {
-  const [showNotification, setShowNotification] = useState(true)
+  const [showArchived, setShowArchived] = useState(false)
 
   const { data: groupsData, error: groupsError, isLoading: groupsLoading } = useSWR<any[]>('/api/groups', fetcher)
   const { data: balancesData, error: balancesError, isLoading: balancesLoading } = useSWR<Balance[]>('/api/users/me/balances', fetcher)
+  const { data: unreadNotifications } = useSWR<any[]>('/api/notifications?unread=true', fetcher)
   
+  const hasUnread = (unreadNotifications?.length || 0) > 0
   const balances = balancesData || []
   const groups = (groupsData || []).map(g => ({
     id: g.id || g._id,
@@ -48,8 +50,12 @@ export function Dashboard({
     type: g.type || 'home',
     members: g.members || [],
     totalExpenses: g.totalExpenses || 0,
-    userBalance: g.userBalance || 0
+    userBalance: g.userBalance || 0,
+    isArchived: g.isArchived || false
   })) as Group[]
+
+  const activeGroups = groups.filter(g => !g.isArchived)
+  const archivedGroups = groups.filter(g => g.isArchived)
 
   const netBalance = balances.reduce((sum, b) => sum + b.amount, 0)
   const activeBalances = balances.filter(b => Math.abs(b.amount) > 0.01)
@@ -101,13 +107,10 @@ export function Dashboard({
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
                 className="relative p-2 rounded-xl bg-secondary hover:bg-secondary/80 transition-colors"
-                onClick={() => {
-                  setShowNotification(false)
-                  onOpenNotifications()
-                }}
+                onClick={onOpenNotifications}
               >
                 <Bell className="w-5 h-5" />
-                {showNotification && (
+                {hasUnread && (
                   <motion.span
                     initial={{ scale: 0 }}
                     animate={{ scale: 1 }}
@@ -157,7 +160,7 @@ export function Dashboard({
             transition={{ delay: 0.2 }}
             className="flex-shrink-0 px-4 py-2 rounded-full bg-secondary text-muted-foreground text-sm font-medium"
           >
-            {groups.length} groups
+            {activeGroups.length} groups
           </motion.div>
         </section>
 
@@ -195,7 +198,7 @@ export function Dashboard({
             </button>
           </div>
           <div className="grid gap-4">
-            {groups.map((group, index) => (
+            {activeGroups.map((group, index) => (
               <GroupCard
                 key={group.id}
                 group={group}
@@ -204,6 +207,64 @@ export function Dashboard({
               />
             ))}
           </div>
+
+          {archivedGroups.length > 0 && (
+            <div className="mt-12 mb-8">
+              <motion.button
+                onClick={() => setShowArchived(!showArchived)}
+                className={`flex items-center justify-between w-full p-4 rounded-2xl border transition-all ${
+                  showArchived 
+                    ? 'bg-secondary/50 border-border shadow-inner' 
+                    : 'bg-gradient-to-r from-secondary/50 to-transparent border-transparent hover:border-border/50'
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <div className={`p-2 rounded-xl ${showArchived ? 'bg-primary text-primary-foreground' : 'bg-secondary text-muted-foreground'} transition-colors`}>
+                    <Archive className="w-5 h-5" />
+                  </div>
+                  <div className="text-left">
+                    <p className="font-bold text-sm">Archived Groups</p>
+                    <p className="text-xs text-muted-foreground">
+                      {archivedGroups.length} {archivedGroups.length === 1 ? 'group' : 'groups'} saved
+                    </p>
+                  </div>
+                </div>
+                <motion.div
+                  animate={{ rotate: showArchived ? 180 : 0 }}
+                  className="p-2 rounded-lg hover:bg-secondary transition-colors"
+                >
+                  <ChevronDown className="w-5 h-5 text-muted-foreground" />
+                </motion.div>
+              </motion.button>
+              
+              <AnimatePresence>
+                {showArchived && (
+                  <motion.div
+                    initial={{ height: 0, opacity: 0, marginTop: 0 }}
+                    animate={{ height: 'auto', opacity: 1, marginTop: 16 }}
+                    exit={{ height: 0, opacity: 0, marginTop: 0 }}
+                    className="grid gap-4 overflow-visible p-1" // Changed to overflow-visible and added p-1
+                  >
+                    {archivedGroups.map((group, index) => (
+                      <motion.div 
+                        key={group.id} 
+                        initial={{ x: -20, opacity: 0 }}
+                        animate={{ x: 0, opacity: 0.7 }}
+                        whileHover={{ opacity: 1 }}
+                        className="transition-opacity"
+                      >
+                        <GroupCard
+                          group={group}
+                          index={index}
+                          onClick={onSelectGroup}
+                        />
+                      </motion.div>
+                    ))}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+          )}
         </section>
 
         {/* Weekly Summary */}

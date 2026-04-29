@@ -17,8 +17,20 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: result.error.format() }, { status: 400 })
     }
 
-    const { toUser, amount, method, groupId, note } = result.data
+    const { toUser, amount, method, groupId, note, isReminder } = result.data
     await connectDB()
+
+    if (isReminder) {
+      // Only create a notification for reminders
+      await Notification.create({
+        userId: toUser,
+        type: 'reminder',
+        message: `${session.user.name} reminded you about $${(amount ?? 0).toFixed(2)}`,
+        fromUser: session.user.id,
+        relatedGroupId: groupId,
+      })
+      return NextResponse.json({ success: true, message: 'Reminder sent' })
+    }
 
     const settlement = await Settlement.create({
       fromUser: session.user.id,
@@ -30,7 +42,7 @@ export async function POST(request: Request) {
       status: 'completed',
     })
 
-    // Notify the receiver
+    // Notify the receiver of actual settlement
     await Notification.create({
       userId: toUser,
       type: 'settled_up',

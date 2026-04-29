@@ -25,7 +25,8 @@ export const settlementSchema = z.object({
   amount: z.number().positive(),
   method: z.enum(['cash', 'upi', 'bank']).default('cash'),
   groupId: z.string().optional().nullable(),
-  note: z.string().optional()
+  note: z.string().optional(),
+  isReminder: z.boolean().optional()
 })
 
 export const userUpdateSchema = z.object({

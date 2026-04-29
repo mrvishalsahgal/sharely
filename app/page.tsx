@@ -118,7 +118,11 @@ export default function Home() {
         ) : view === 'invite' ? (
           <InviteView key="invite" onBack={() => setView(selectedGroup ? 'add-members' : 'create-group')} />
         ) : view === 'people' ? (
-          <PeopleView key="people" onBack={() => setView('dashboard')} />
+          <PeopleView 
+            key="people" 
+            onBack={() => setView('dashboard')} 
+            onSettle={(balance) => handleSettle(balance)}
+          />
         ) : null}
       </AnimatePresence>
 

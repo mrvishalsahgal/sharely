@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ArrowLeft, Plus, Users, Settings, PieChart, MoreHorizontal, Edit2, BellOff, LogOut, Loader2, ChevronRight } from 'lucide-react'
+import { ArrowLeft, Plus, Users, Settings, PieChart, MoreHorizontal, Edit2, BellOff, LogOut, Loader2, ChevronRight, Archive, ArchiveRestore } from 'lucide-react'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import useSWR, { useSWRConfig } from 'swr'
 import { fetcher } from '@/lib/fetcher'
@@ -20,7 +20,9 @@ interface GroupSpaceProps {
 export function GroupSpace({ group, onBack, onAddExpense, onAddMembers }: GroupSpaceProps) {
   const [activeTab, setActiveTab] = useState<'expenses' | 'balances' | 'stats'>('expenses')
   const [showLeaveConfirm, setShowLeaveConfirm] = useState(false)
+  const [showArchiveConfirm, setShowArchiveConfirm] = useState(false)
   const [isLeaving, setIsLeaving] = useState(false)
+  const [isArchiving, setIsArchiving] = useState(false)
 
   const { data: expensesData, isLoading: expensesLoading } = useSWR<any[]>(`/api/groups/${group.id}/expenses`, fetcher)
   const { data: groupBalancesData, isLoading: balancesLoading } = useSWR<Balance[]>(`/api/groups/${group.id}/balances`, fetcher)
@@ -62,6 +64,26 @@ export function GroupSpace({ group, onBack, onAddExpense, onAddMembers }: GroupS
       }
     } catch (error) {
       console.error('Reaction error:', error)
+    }
+  }
+
+  const handleArchive = async () => {
+    setIsArchiving(true)
+    try {
+      const response = await fetch(`/api/groups/${group.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ isArchived: !group.isArchived })
+      })
+      if (response.ok) {
+        mutate('/api/groups')
+        onBack()
+      }
+    } catch (error) {
+      console.error('Archive error:', error)
+    } finally {
+      setIsArchiving(false)
+      setShowArchiveConfirm(false)
     }
   }
 
@@ -129,6 +151,13 @@ export function GroupSpace({ group, onBack, onAddExpense, onAddMembers }: GroupS
                     <span>Mute Notifications</span>
                   </DropdownMenuItem>
                   <DropdownMenuItem 
+                    onClick={() => setShowArchiveConfirm(true)}
+                    className="gap-2 cursor-pointer rounded-lg p-2 hover:bg-secondary"
+                  >
+                    <Archive className="w-4 h-4 text-muted-foreground" />
+                    <span>{group.isArchived ? 'Unarchive Group' : 'Archive Group'}</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem 
                     onClick={() => setShowLeaveConfirm(true)}
                     className="gap-2 cursor-pointer rounded-lg p-2 hover:bg-negative/20 text-negative focus:text-negative focus:bg-negative/20"
                   >
@@ -192,6 +221,22 @@ export function GroupSpace({ group, onBack, onAddExpense, onAddMembers }: GroupS
       {/* Content */}
       <main className="flex-1 max-w-lg mx-auto w-full px-4 py-6">
         <AnimatePresence mode="wait">
+          {group.isArchived && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="mb-6 p-4 rounded-2xl bg-secondary/50 border border-dashed border-border flex flex-col items-center text-center gap-2"
+            >
+              <div className="w-10 h-10 rounded-full bg-background flex items-center justify-center">
+                <Archive className="w-5 h-5 text-muted-foreground" />
+              </div>
+              <div>
+                <p className="font-bold text-sm">Group Archived</p>
+                <p className="text-xs text-muted-foreground">This group is in read-only mode. Unarchive it from the settings to add new expenses.</p>
+              </div>
+            </motion.div>
+          )}
+
           {activeTab === 'expenses' && (
             <motion.div
               key="expenses"
@@ -247,16 +292,18 @@ export function GroupSpace({ group, onBack, onAddExpense, onAddMembers }: GroupS
       </main>
 
       {/* Floating Add Button */}
-      <motion.button
-        initial={{ scale: 0 }}
-        animate={{ scale: 1 }}
-        whileHover={{ scale: 1.1 }}
-        whileTap={{ scale: 0.9 }}
-        onClick={onAddExpense}
-        className="fixed bottom-6 right-6 w-16 h-16 rounded-full bg-gradient-to-br from-primary to-accent text-primary-foreground shadow-2xl flex items-center justify-center z-50"
-      >
-        <Plus className="w-8 h-8" />
-      </motion.button>
+      {!group.isArchived && (
+        <motion.button
+          initial={{ scale: 0 }}
+          animate={{ scale: 1 }}
+          whileHover={{ scale: 1.1 }}
+          whileTap={{ scale: 0.9 }}
+          onClick={onAddExpense}
+          className="fixed bottom-6 right-6 w-16 h-16 rounded-full bg-gradient-to-br from-primary to-accent text-primary-foreground shadow-2xl flex items-center justify-center z-50"
+        >
+          <Plus className="w-8 h-8" />
+        </motion.button>
+      )}
 
       {/* Confirm Leave Modal */}
       <ConfirmModal
@@ -282,6 +329,21 @@ export function GroupSpace({ group, onBack, onAddExpense, onAddMembers }: GroupS
         confirmText="Leave Group"
         variant="danger"
         isLoading={isLeaving}
+      />
+
+      {/* Confirm Archive Modal */}
+      <ConfirmModal
+        isOpen={showArchiveConfirm}
+        onClose={() => setShowArchiveConfirm(false)}
+        onConfirm={handleArchive}
+        title={group.isArchived ? "Unarchive Group?" : "Archive Group?"}
+        message={group.isArchived 
+          ? `This will move ${group.name} back to your active dashboard.` 
+          : `Are you sure you want to archive ${group.name}? It will be hidden from your main dashboard.`
+        }
+        confirmText={group.isArchived ? "Unarchive" : "Archive"}
+        variant="default"
+        isLoading={isArchiving}
       />
     </div>
   )

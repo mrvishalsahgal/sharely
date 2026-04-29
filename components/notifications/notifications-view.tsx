@@ -18,7 +18,7 @@ import { fetcher } from '@/lib/fetcher'
 
 interface Notification {
   id: string
-  type: "expense_added" | "payment_received" | "payment_reminder" | "friend_request" | "group_invite"
+  type: "expense_added" | "settled_up" | "payment_received" | "payment_reminder" | "friend_request" | "group_invite" | "reminder"
   title: string
   message: string
   read: boolean
@@ -37,7 +37,10 @@ export function NotificationsView({ onBack }: NotificationsViewProps) {
   const notificationList = (notificationsData || []).map(n => ({
     id: n._id,
     type: n.type as any,
-    title: n.type === 'expense_added' ? 'New expense added' : 'Payment received',
+    title: n.type === 'expense_added' ? 'New expense added' : 
+           n.type === 'reminder' ? 'Payment reminder' :
+           n.type === 'settled_up' ? 'Payment received' : 
+           'New notification',
     message: n.message,
     read: n.isRead,
     user: n.fromUser || { name: 'System', color: 'bg-primary' },
@@ -100,6 +103,12 @@ export function NotificationsView({ onBack }: NotificationsViewProps) {
         return UserPlus
       case "group_invite":
         return UserPlus
+      case "settled_up":
+        return CreditCard
+      case "reminder":
+        return AlertCircle
+      default:
+        return Bell
     }
   }
 
@@ -114,6 +123,12 @@ export function NotificationsView({ onBack }: NotificationsViewProps) {
       case "friend_request":
       case "group_invite":
         return "text-primary bg-primary/20"
+      case "settled_up":
+        return "text-positive bg-positive/20"
+      case "reminder":
+        return "text-negative bg-negative/20"
+      default:
+        return "text-muted-foreground bg-muted/20"
     }
   }
 
@@ -165,7 +180,7 @@ export function NotificationsView({ onBack }: NotificationsViewProps) {
         ) : (
           <div className="space-y-2">
             {notificationList.map((notification, index) => {
-              const Icon = getNotificationIcon(notification.type)
+              const Icon = getNotificationIcon(notification.type) || Bell
               const colorClass = getNotificationColor(notification.type)
 
               return (

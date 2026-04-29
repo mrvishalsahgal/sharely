@@ -1,7 +1,7 @@
 'use client'
 
 import { motion } from 'framer-motion'
-import { Users, ChevronRight } from 'lucide-react'
+import { Users, ChevronRight, Archive } from 'lucide-react'
 import type { Group } from '@/lib/types'
 
 interface GroupCardProps {
@@ -54,13 +54,21 @@ export function GroupCard({ group, index, onClick }: GroupCardProps) {
               </div>
             </div>
           </div>
-          <motion.div
-            initial={{ x: 0 }}
-            whileHover={{ x: 5 }}
-            className="text-muted-foreground group-hover:text-foreground transition-colors"
-          >
-            <ChevronRight className="w-5 h-5" />
-          </motion.div>
+          <div className="flex items-center gap-2">
+            {group.isArchived && (
+              <div className="flex items-center gap-1 px-2 py-1 rounded-lg bg-secondary/80 text-[10px] font-bold text-muted-foreground uppercase tracking-widest border border-border/50">
+                <Archive className="w-3 h-3" />
+                Archived
+              </div>
+            )}
+            <motion.div
+              initial={{ x: 0 }}
+              whileHover={{ x: 5 }}
+              className="text-muted-foreground group-hover:text-foreground transition-colors"
+            >
+              <ChevronRight className="w-5 h-5" />
+            </motion.div>
+          </div>
         </div>
 
         {/* Stats */}

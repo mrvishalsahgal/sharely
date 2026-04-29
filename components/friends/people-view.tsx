@@ -20,14 +20,16 @@ import { Input } from '@/components/ui/input'
 
 interface PeopleViewProps {
   onBack: () => void
+  onSettle: (balance: any) => void
 }
 
-export function PeopleView({ onBack }: PeopleViewProps) {
+export function PeopleView({ onBack, onSettle }: PeopleViewProps) {
   const { mutate } = useSWRConfig()
   const [searchQuery, setSearchQuery] = useState('')
   const [isConnecting, setIsConnecting] = useState<string | null>(null)
 
   const { data: friends, isLoading: friendsLoading } = useSWR<any[]>('/api/friends', fetcher)
+  const { data: balances, isLoading: balancesLoading } = useSWR<any[]>('/api/users/me/balances', fetcher)
   const { data: searchedUsers, isLoading: isSearching } = useSWR<any[]>(
     searchQuery ? `/api/users?q=${searchQuery}` : null,
     fetcher
@@ -64,6 +66,8 @@ export function PeopleView({ onBack }: PeopleViewProps) {
       console.error('Remove friend error:', error)
     }
   }
+
+  const [expandedFriendId, setExpandedFriendId] = useState<string | null>(null)
 
   const friendIds = friends?.map(f => f._id || f.id) || []
 
@@ -187,39 +191,168 @@ export function PeopleView({ onBack }: PeopleViewProps) {
             </div>
           ) : (
             <div className="grid gap-3">
-              {friends.map((friend) => (
-                <motion.div
-                  layout
-                  key={friend._id || friend.id}
-                  initial={{ opacity: 0, scale: 0.95 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  className="flex items-center gap-4 p-4 rounded-3xl bg-card border border-border/50 hover:shadow-md transition-all group"
-                >
-                  <div className={`w-14 h-14 rounded-2xl ${friend.color || 'bg-primary'} flex items-center justify-center text-xl font-bold text-white shadow-lg shrink-0`}>
-                    {friend.name.charAt(0).toUpperCase()}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-bold text-lg truncate">{friend.name}</p>
-                    <p className="text-sm text-muted-foreground truncate">{friend.email}</p>
-                  </div>
-                  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <motion.button
-                      whileHover={{ scale: 1.1 }}
-                      whileTap={{ scale: 0.9 }}
-                      onClick={() => handleRemoveFriend(friend._id || friend.id)}
-                      className="p-3 rounded-xl hover:bg-negative/10 text-negative transition-colors"
-                      title="Remove Friend"
+              {friends.map((friend) => {
+                const balance = balances?.find(b => (b.user?._id || b.user?.id) === (friend._id || friend.id))
+                const amount = balance?.amount || 0
+                const isOwed = amount > 0
+                const isDebt = amount < 0
+                const isExpanded = expandedFriendId === (friend._id || friend.id)
+
+                return (
+                  <motion.div
+                    layout
+                    key={friend._id || friend.id}
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    className={`flex flex-col p-4 rounded-3xl bg-card border transition-all overflow-hidden ${
+                      isExpanded ? 'border-primary ring-1 ring-primary/20 shadow-lg' : 'border-border/50 hover:shadow-md'
+                    }`}
+                  >
+                    <div 
+                      className="flex items-center gap-4 cursor-pointer group"
+                      onClick={() => setExpandedFriendId(isExpanded ? null : (friend._id || friend.id))}
                     >
-                      <UserMinus className="w-5 h-5" />
-                    </motion.button>
-                  </div>
-                  <ChevronRight className="w-5 h-5 text-muted-foreground group-hover:text-foreground transition-colors" />
-                </motion.div>
-              ))}
+                      <div className={`w-14 h-14 rounded-2xl ${friend.color || 'bg-primary'} flex items-center justify-center text-xl font-bold text-white shadow-lg shrink-0`}>
+                        {friend.name.charAt(0).toUpperCase()}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-bold text-lg truncate">{friend.name}</p>
+                        <p className="text-sm text-muted-foreground truncate">{friend.email}</p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <motion.button
+                          animate={{ rotate: isExpanded ? 90 : 0 }}
+                          className="p-2 rounded-xl hover:bg-secondary transition-colors"
+                        >
+                          <ChevronRight className="w-5 h-5" />
+                        </motion.button>
+                      </div>
+                    </div>
+
+                    <AnimatePresence>
+                      {isExpanded && (
+                        <motion.div
+                          initial={{ height: 0, opacity: 0 }}
+                          animate={{ height: 'auto', opacity: 1 }}
+                          exit={{ height: 0, opacity: 0 }}
+                          className="pt-4"
+                        >
+                          <div className="space-y-4">
+                            {/* Balance & Actions */}
+                            <div className="p-4 rounded-2xl bg-secondary/30 flex items-center justify-between">
+                              <div className="flex flex-col">
+                                <p className="text-xs text-muted-foreground uppercase font-bold tracking-wider mb-1">
+                                  Current Balance
+                                </p>
+                                <p className={`text-lg font-bold ${amount === 0 ? 'text-muted-foreground' : isOwed ? 'text-positive' : 'text-negative'}`}>
+                                  {amount === 0 ? 'Settled' : isOwed ? `Owes you $${amount.toFixed(2)}` : `You owe $${Math.abs(amount).toFixed(2)}`}
+                                </p>
+                              </div>
+                              <div className="flex gap-2">
+                                {(isOwed || isDebt) && (
+                                  <Button
+                                    size="sm"
+                                    onClick={(e) => {
+                                      e.stopPropagation()
+                                      onSettle(balance)
+                                    }}
+                                    className={`rounded-xl px-6 h-10 ${isOwed ? 'bg-positive hover:bg-positive/90 text-positive-foreground' : 'bg-gradient-to-r from-primary to-accent text-white'}`}
+                                  >
+                                    {isOwed ? 'Remind' : 'Settle'}
+                                  </Button>
+                                )}
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    handleRemoveFriend(friend._id || friend.id)
+                                  }}
+                                  className="rounded-xl text-negative hover:bg-negative/10"
+                                >
+                                  <UserMinus className="w-5 h-5" />
+                                </Button>
+                              </div>
+                            </div>
+
+                            {/* Recent Transactions */}
+                            <div className="space-y-3">
+                              <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-widest px-1">
+                                Recent Transactions
+                              </h3>
+                              <FriendTransactions friendId={friend._id || friend.id} />
+                            </div>
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </motion.div>
+                )
+              })}
             </div>
           )}
         </div>
       </main>
+    </div>
+  )
+}
+
+function FriendTransactions({ friendId }: { friendId: string }) {
+  const { data: expenses, isLoading } = useSWR<any[]>(`/api/friends/${friendId}/expenses`, fetcher)
+
+  if (isLoading) {
+    return (
+      <div className="space-y-2">
+        {[1, 2].map(i => (
+          <div key={i} className="h-16 rounded-xl bg-secondary/50 animate-pulse" />
+        ))}
+      </div>
+    )
+  }
+
+  if (!expenses || expenses.length === 0) {
+    return (
+      <div className="py-6 text-center bg-secondary/20 rounded-2xl border border-dashed border-border/50">
+        <p className="text-sm text-muted-foreground">No shared transactions yet</p>
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-2">
+      {expenses.map((expense) => {
+        const isPayer = (expense.paidBy?._id || expense.paidBy?.id) === friendId
+        const mySplit = expense.splits.find((s: any) => (s.user?._id || s.user?.id) !== friendId) // Assuming simple 1-on-1 for now
+        
+        return (
+          <div 
+            key={expense._id || expense.id}
+            className="flex items-center justify-between p-3 rounded-xl bg-secondary/10 border border-border/30"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-background flex items-center justify-center text-lg">
+                {expense.category === 'food' ? '🍕' : 
+                 expense.category === 'transport' ? '🚗' : 
+                 expense.category === 'entertainment' ? '🍿' : '📄'}
+              </div>
+              <div>
+                <p className="font-medium text-sm">{expense.title}</p>
+                <p className="text-[10px] text-muted-foreground">
+                  {new Date(expense.createdAt).toLocaleDateString()} • {expense.groupId ? 'Group' : 'Direct'}
+                </p>
+              </div>
+            </div>
+            <div className="text-right">
+              <p className={`font-bold text-sm ${isPayer ? 'text-negative' : 'text-positive'}`}>
+                {isPayer ? '-' : '+'}${expense.amount.toFixed(2)}
+              </p>
+              <p className="text-[10px] text-muted-foreground">
+                {isPayer ? `They paid` : `You paid`}
+              </p>
+            </div>
+          </div>
+        )
+      })}
     </div>
   )
 }
