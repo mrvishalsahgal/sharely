@@ -631,7 +631,7 @@ function Step3({
   }
 
   const distributeEqually = () => {
-    const perPerson = amount / (selectedMembers.length + 1)
+    const perPerson = amount / selectedMembers.length
     const newAmounts: CustomSplitAmounts = {}
     selectedMembers.forEach(id => {
       newAmounts[id] = (perPerson ?? 0).toFixed(2)

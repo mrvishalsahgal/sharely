@@ -1,7 +1,8 @@
 'use client'
 
-import { useState } from 'react'
-import { AnimatePresence } from 'framer-motion'
+import { useState, useEffect, Suspense } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
+import { motion, AnimatePresence } from 'framer-motion'
 import { useSWRConfig } from 'swr'
 import { Dashboard } from '@/components/dashboard/dashboard'
 import { GroupSpace } from '@/components/group/group-space'
@@ -20,16 +21,36 @@ import useSWR from 'swr'
 import { fetcher } from '@/lib/fetcher'
 import type { Group, Balance } from '@/lib/types'
 
-type View = 'dashboard' | 'group' | 'settings' | 'notifications' | 'create-group' | 'add-members' | 'activity' | 'profile' | 'invite' | 'people' | 'stats'
+type View = 'dashboard' | 'group' | 'settings' | 'notifications' | 'create-group' | 'add-members' | 'activity' | 'profile' | 'people' | 'stats'
 
-export default function Home() {
+function HomeContent() {
   const { mutate } = useSWRConfig()
   const [view, setView] = useState<View>('dashboard')
   const [selectedGroup, setSelectedGroup] = useState<Group | null>(null)
   const [selectedBalance, setSelectedBalance] = useState<Balance | null>(null)
   const [showAddExpense, setShowAddExpense] = useState(false)
   const [showSettle, setShowSettle] = useState(false)
+  const [showInvite, setShowInvite] = useState(false)
   const [addExpenseContext, setAddExpenseContext] = useState<{ groupId?: string } | null>(null)
+  const searchParams = useSearchParams()
+  const joinedGroupId = searchParams.get('joinedGroup')
+  const initialView = searchParams.get('view') as View
+
+  useEffect(() => {
+    if (joinedGroupId) {
+      // Fetch group details and select it
+      fetch(`/api/groups/${joinedGroupId}`)
+        .then(res => res.json())
+        .then(group => {
+          if (group && !group.error) {
+            setSelectedGroup(group)
+            setView('group')
+          }
+        })
+    } else if (initialView) {
+      setView(initialView)
+    }
+  }, [joinedGroupId, initialView])
 
   const { data: unreadNotifications } = useSWR<any[]>('/api/notifications?unread=true', fetcher)
   const unreadCount = unreadNotifications?.length || 0
@@ -113,10 +134,10 @@ export default function Home() {
               mutate('/api/groups')
               setView('dashboard')
             }} 
-            onInviteFriend={() => setView('invite')} 
+            onInviteFriend={() => setShowInvite(true)} 
           />
         ) : view === 'add-members' && selectedGroup ? (
-          <AddMembersView key="add-members" groupId={selectedGroup._id || selectedGroup.id} onBack={() => setView('group')} onInviteFriend={() => setView('invite')} />
+          <AddMembersView key="add-members" groupId={selectedGroup._id || selectedGroup.id} onBack={() => setView('group')} onInviteFriend={() => setShowInvite(true)} />
         ) : selectedGroup ? (
           <GroupSpace
             key="group"
@@ -132,13 +153,12 @@ export default function Home() {
           <ActivityView key="activity" onBack={() => setView('dashboard')} />
         ) : view === 'profile' ? (
           <ProfileView key="profile" onBack={() => setView('dashboard')} onOpenSettings={() => setView('settings')} onOpenActivity={() => setView('activity')} />
-        ) : view === 'invite' ? (
-          <InviteView key="invite" onBack={() => setView(selectedGroup ? 'add-members' : 'create-group')} />
         ) : view === 'people' ? (
           <PeopleView 
             key="people" 
             onBack={() => setView('dashboard')} 
             onSettle={(balance) => handleSettle(balance)}
+            onInviteFriend={() => setShowInvite(true)}
           />
         ) : null}
       </AnimatePresence>
@@ -162,7 +182,45 @@ export default function Home() {
         }}
         onSettle={handleSettleComplete}
       />
+
+      {/* Invite Modal Overlay */}
+      <AnimatePresence>
+        {showInvite && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-6">
+            <motion.div 
+              initial={{ opacity: 0, backdropFilter: "blur(0px)" }}
+              animate={{ opacity: 1, backdropFilter: "blur(8px)" }}
+              exit={{ opacity: 0, backdropFilter: "blur(0px)" }}
+              onClick={() => setShowInvite(false)}
+              className="absolute inset-0 bg-background/40"
+            />
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="relative w-full max-w-lg bg-background rounded-[2.5rem] shadow-2xl border border-border overflow-hidden max-h-[90vh] flex flex-col"
+            >
+              <InviteView 
+                onBack={() => setShowInvite(false)} 
+                groupId={selectedGroup?._id || selectedGroup?.id} 
+              />
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   </div>
+  )
+}
+
+export default function Home() {
+  return (
+    <Suspense fallback={
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+      </div>
+    }>
+      <HomeContent />
+    </Suspense>
   )
 }

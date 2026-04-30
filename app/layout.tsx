@@ -5,7 +5,7 @@ import './globals.css'
 
 
 export const metadata: Metadata = {
-  title: 'SplitSmart - Smart Expense Sharing',
+  title: 'Sharely - Split expenses. Not friendships',
   description: 'Real-time expense sharing for friends, roommates, and teams',
   generator: 'v0.app',
   icons: {

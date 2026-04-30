@@ -38,8 +38,8 @@ export function DesktopSidebar({ activeView, onViewChange, unreadCount }: Deskto
           <PlusCircle className="w-6 h-6 text-white" />
         </div>
         <div>
-          <h1 className="text-xl font-black tracking-tight gradient-text">SplitSmart</h1>
-          <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest">Premium Expense Hub</p>
+          <h1 className="text-xl font-black tracking-tight gradient-text">Sharely</h1>
+          <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest">Split expenses. Not friendships</p>
         </div>
       </div>
       <nav className="flex-1 space-y-2">

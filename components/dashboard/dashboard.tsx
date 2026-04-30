@@ -76,8 +76,8 @@ export function Dashboard({
         <div className="max-w-lg mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-2xl font-bold gradient-text">SplitSmart</h1>
-              <p className="text-sm text-muted-foreground">Welcome back!</p>
+              <h1 className="text-2xl font-bold gradient-text">Sharely</h1>
+              <p className="text-sm text-muted-foreground">Split expenses. Not friendships</p>
             </div>
             <div className="flex items-center gap-2">
               <motion.button

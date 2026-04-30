@@ -21,9 +21,10 @@ import { Input } from '@/components/ui/input'
 interface PeopleViewProps {
   onBack: () => void
   onSettle: (balance: any) => void
+  onInviteFriend: () => void
 }
 
-export function PeopleView({ onBack, onSettle }: PeopleViewProps) {
+export function PeopleView({ onBack, onSettle, onInviteFriend }: PeopleViewProps) {
   const { mutate } = useSWRConfig()
   const [searchQuery, setSearchQuery] = useState('')
   const [isConnecting, setIsConnecting] = useState<string | null>(null)
@@ -134,8 +135,15 @@ export function PeopleView({ onBack, onSettle }: PeopleViewProps) {
                       <Loader2 className="w-6 h-6 animate-spin text-primary" />
                     </div>
                   ) : searchedUsers?.length === 0 ? (
-                    <div className="text-center py-8 bg-card rounded-3xl border border-dashed border-border">
-                      <p className="text-sm text-muted-foreground">No users found</p>
+                    <div className="text-center py-12 bg-card rounded-3xl border border-dashed border-border px-6">
+                      <div className="w-12 h-12 rounded-full bg-secondary flex items-center justify-center mx-auto mb-4">
+                        <Plus className="w-5 h-5 text-muted-foreground" />
+                      </div>
+                      <h3 className="font-bold mb-1">User not found</h3>
+                      <p className="text-xs text-muted-foreground mb-6">Want to invite them to SplitSmart instead?</p>
+                      <Button onClick={onInviteFriend} size="sm" variant="outline" className="rounded-xl font-bold">
+                        Invite Friend
+                      </Button>
                     </div>
                   ) : (
                     <div className="space-y-2">
