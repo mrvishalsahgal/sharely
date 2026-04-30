@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { auth } from '@/auth'
 import { connectDB } from '@/lib/mongodb'
 import Group from '@/lib/models/Group'
+import User from '@/lib/models/User'
 import { groupSchema } from '@/lib/validations'
 import { calculateGroupSummaries } from '@/lib/balances'
 

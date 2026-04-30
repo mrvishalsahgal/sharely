@@ -70,9 +70,9 @@ export function Dashboard({
   }
 
   return (
-    <div className="min-h-screen pb-24">
+    <div className="min-h-screen pb-24 md:pb-8">
       {/* Header */}
-      <header className="sticky top-0 z-50 glass-card border-b border-border/50">
+      <header className="md:hidden sticky top-0 z-50 glass-card border-b border-border/50">
         <div className="max-w-lg mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div>
@@ -131,146 +131,158 @@ export function Dashboard({
         </div>
       </header>
 
-      <main className="max-w-lg mx-auto px-4">
-        {/* Hero Balance */}
-        <section className="py-8">
-          <AnimatedBalance amount={netBalance} />
-        </section>
+      <main className="max-w-lg md:max-w-7xl mx-auto px-4 md:px-8">
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-8">
+          {/* Left Column: Balance & People */}
+          <div className="md:col-span-4 space-y-8">
+            <section className="py-8 md:py-0">
+              <AnimatedBalance amount={netBalance} />
+            </section>
 
-        {/* Quick Summary Pills */}
-        <section className="flex gap-3 mb-8 overflow-x-auto pb-2 -mx-4 px-4 scrollbar-hide">
-          <motion.div
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            className="flex-shrink-0 px-4 py-2 rounded-full bg-positive/20 text-positive text-sm font-medium"
-          >
-            {activeBalances.filter(b => b.amount > 0).length} owe you
-          </motion.div>
-          <motion.div
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.1 }}
-            className="flex-shrink-0 px-4 py-2 rounded-full bg-negative/20 text-negative text-sm font-medium"
-          >
-            {activeBalances.filter(b => b.amount < 0).length} you owe
-          </motion.div>
-          <motion.div
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.2 }}
-            className="flex-shrink-0 px-4 py-2 rounded-full bg-secondary text-muted-foreground text-sm font-medium"
-          >
-            {activeGroups.length} groups
-          </motion.div>
-        </section>
-
-        {/* Balances Section */}
-        <section className="mb-8">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold">People</h2>
-            <button 
-              onClick={onOpenPeople}
-              className="text-sm text-primary hover:text-primary/80 transition-colors"
-            >
-              See all
-            </button>
-          </div>
-          <div className="space-y-3">
-            <AnimatePresence>
-              {activeBalances.slice(0, 3).map((balance, index) => (
-                <BalanceCard
-                  key={balance.user.id}
-                  balance={balance}
-                  index={index}
-                  onSettle={onSettle}
-                />
-              ))}
-            </AnimatePresence>
-          </div>
-        </section>
-
-        {/* Groups Section */}
-        <section className="mb-8">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold">Your Groups</h2>
-            <button onClick={onCreateGroup} className="text-sm text-primary hover:text-primary/80 transition-colors">
-              Create group
-            </button>
-          </div>
-          <div className="grid gap-4">
-            {activeGroups.map((group, index) => (
-              <GroupCard
-                key={group.id}
-                group={group}
-                index={index}
-                onClick={onSelectGroup}
-              />
-            ))}
-          </div>
-
-          {archivedGroups.length > 0 && (
-            <div className="mt-12 mb-8">
-              <motion.button
-                onClick={() => setShowArchived(!showArchived)}
-                className={`flex items-center justify-between w-full p-4 rounded-2xl border transition-all ${
-                  showArchived 
-                    ? 'bg-secondary/50 border-border shadow-inner' 
-                    : 'bg-gradient-to-r from-secondary/50 to-transparent border-transparent hover:border-border/50'
-                }`}
-              >
-                <div className="flex items-center gap-3">
-                  <div className={`p-2 rounded-xl ${showArchived ? 'bg-primary text-primary-foreground' : 'bg-secondary text-muted-foreground'} transition-colors`}>
-                    <Archive className="w-5 h-5" />
-                  </div>
-                  <div className="text-left">
-                    <p className="font-bold text-sm">Archived Groups</p>
-                    <p className="text-xs text-muted-foreground">
-                      {archivedGroups.length} {archivedGroups.length === 1 ? 'group' : 'groups'} saved
-                    </p>
-                  </div>
-                </div>
-                <motion.div
-                  animate={{ rotate: showArchived ? 180 : 0 }}
-                  className="p-2 rounded-lg hover:bg-secondary transition-colors"
+            {/* Balances Section */}
+            <section>
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-semibold">People</h2>
+                <button 
+                  onClick={onOpenPeople}
+                  className="text-sm text-primary hover:text-primary/80 transition-colors"
                 >
-                  <ChevronDown className="w-5 h-5 text-muted-foreground" />
-                </motion.div>
-              </motion.button>
-              
-              <AnimatePresence>
-                {showArchived && (
-                  <motion.div
-                    initial={{ height: 0, opacity: 0, marginTop: 0 }}
-                    animate={{ height: 'auto', opacity: 1, marginTop: 16 }}
-                    exit={{ height: 0, opacity: 0, marginTop: 0 }}
-                    className="grid gap-4 overflow-visible p-1" // Changed to overflow-visible and added p-1
-                  >
-                    {archivedGroups.map((group, index) => (
-                      <motion.div 
-                        key={group.id} 
-                        initial={{ x: -20, opacity: 0 }}
-                        animate={{ x: 0, opacity: 0.7 }}
-                        whileHover={{ opacity: 1 }}
-                        className="transition-opacity"
-                      >
-                        <GroupCard
-                          group={group}
-                          index={index}
-                          onClick={onSelectGroup}
-                        />
-                      </motion.div>
-                    ))}
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
-          )}
-        </section>
+                  See all
+                </button>
+              </div>
+              <div className="space-y-3">
+                <AnimatePresence>
+                  {activeBalances.slice(0, 5).map((balance, index) => (
+                    <BalanceCard
+                      key={balance.user.id}
+                      balance={balance}
+                      index={index}
+                      onSettle={onSettle}
+                    />
+                  ))}
+                </AnimatePresence>
+              </div>
+            </section>
 
-        {/* Weekly Summary */}
-        <section className="mb-8">
-          <WeeklySummary />
-        </section>
+            {/* Weekly Summary on Desktop Left */}
+            <div className="hidden md:block">
+              <WeeklySummary />
+            </div>
+          </div>
+
+          {/* Right Column: Groups & Summary */}
+          <div className="md:col-span-8 space-y-8">
+            {/* Quick Summary Pills */}
+            <section className="flex gap-3 overflow-x-auto pb-2 -mx-4 px-4 scrollbar-hide md:mx-0 md:px-0 md:mt-10">
+              <motion.div
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                className="flex-shrink-0 px-4 py-2 rounded-full bg-positive/20 text-positive text-sm font-medium"
+              >
+                {activeBalances.filter(b => b.amount > 0).length} owe you
+              </motion.div>
+              <motion.div
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 0.1 }}
+                className="flex-shrink-0 px-4 py-2 rounded-full bg-negative/20 text-negative text-sm font-medium"
+              >
+                {activeBalances.filter(b => b.amount < 0).length} you owe
+              </motion.div>
+              <motion.div
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 0.2 }}
+                className="flex-shrink-0 px-4 py-2 rounded-full bg-secondary text-muted-foreground text-sm font-medium"
+              >
+                {activeGroups.length} active groups
+              </motion.div>
+            </section>
+
+            {/* Groups Section */}
+            <section>
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-semibold">Your Groups</h2>
+                <button onClick={onCreateGroup} className="text-sm text-primary hover:text-primary/80 transition-colors">
+                  + Create new group
+                </button>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {activeGroups.map((group, index) => (
+                  <GroupCard
+                    key={group.id}
+                    group={group}
+                    index={index}
+                    onClick={onSelectGroup}
+                  />
+                ))}
+              </div>
+
+              {archivedGroups.length > 0 && (
+                <div className="mt-12 mb-8">
+                  <motion.button
+                    onClick={() => setShowArchived(!showArchived)}
+                    className={`flex items-center justify-between w-full p-4 rounded-2xl border transition-all ${
+                      showArchived 
+                        ? 'bg-secondary/50 border-border shadow-inner' 
+                        : 'bg-gradient-to-r from-secondary/50 to-transparent border-transparent hover:border-border/50'
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className={`p-2 rounded-xl ${showArchived ? 'bg-primary text-primary-foreground' : 'bg-secondary text-muted-foreground'} transition-colors`}>
+                        <Archive className="w-5 h-5" />
+                      </div>
+                      <div className="text-left">
+                        <p className="font-bold text-sm">Archived Groups</p>
+                        <p className="text-xs text-muted-foreground">
+                          {archivedGroups.length} {archivedGroups.length === 1 ? 'group' : 'groups'} saved
+                        </p>
+                      </div>
+                    </div>
+                    <motion.div
+                      animate={{ rotate: showArchived ? 180 : 0 }}
+                      className="p-2 rounded-lg hover:bg-secondary transition-colors"
+                    >
+                      <ChevronDown className="w-5 h-5 text-muted-foreground" />
+                    </motion.div>
+                  </motion.button>
+                  
+                  <AnimatePresence>
+                    {showArchived && (
+                      <motion.div
+                        initial={{ height: 0, opacity: 0, marginTop: 0 }}
+                        animate={{ height: 'auto', opacity: 1, marginTop: 16 }}
+                        exit={{ height: 0, opacity: 0, marginTop: 0 }}
+                        className="grid grid-cols-1 md:grid-cols-2 gap-4 overflow-visible p-1"
+                      >
+                        {archivedGroups.map((group, index) => (
+                          <motion.div 
+                            key={group.id} 
+                            initial={{ x: -20, opacity: 0 }}
+                            animate={{ x: 0, opacity: 0.7 }}
+                            whileHover={{ opacity: 1 }}
+                            className="transition-opacity"
+                          >
+                            <GroupCard
+                              group={group}
+                              index={index}
+                              onClick={onSelectGroup}
+                            />
+                          </motion.div>
+                        ))}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+              )}
+            </section>
+
+            {/* Weekly Summary on Mobile Bottom */}
+            <div className="md:hidden">
+              <WeeklySummary />
+            </div>
+          </div>
+        </div>
       </main>
 
       {/* Floating Add Button */}
@@ -280,9 +292,9 @@ export function Dashboard({
         whileHover={{ scale: 1.1 }}
         whileTap={{ scale: 0.9 }}
         onClick={onAddExpense}
-        className="fixed bottom-6 right-6 w-16 h-16 rounded-full bg-gradient-to-br from-primary to-accent text-primary-foreground shadow-2xl flex items-center justify-center z-50"
+        className="fixed bottom-6 right-6 md:bottom-10 md:right-10 w-16 h-16 md:w-20 md:h-20 rounded-full bg-gradient-to-br from-primary to-accent text-primary-foreground shadow-2xl flex items-center justify-center z-50 hover:shadow-primary/20 transition-all border-4 border-background"
       >
-        <Plus className="w-8 h-8" />
+        <Plus className="w-8 h-8 md:w-10 md:h-10" />
       </motion.button>
     </div>
   )

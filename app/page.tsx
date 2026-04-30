@@ -15,9 +15,12 @@ import { PeopleView } from '@/components/friends/people-view'
 import { InviteView } from '@/components/friends/invite-view'
 import { AddExpenseModal } from '@/components/expense/add-expense-modal'
 import { SettleModal } from '@/components/settle/settle-modal'
+import { DesktopSidebar } from '@/components/layout/desktop-sidebar'
+import useSWR from 'swr'
+import { fetcher } from '@/lib/fetcher'
 import type { Group, Balance } from '@/lib/types'
 
-type View = 'dashboard' | 'group' | 'settings' | 'notifications' | 'create-group' | 'add-members' | 'activity' | 'profile' | 'invite' | 'people'
+type View = 'dashboard' | 'group' | 'settings' | 'notifications' | 'create-group' | 'add-members' | 'activity' | 'profile' | 'invite' | 'people' | 'stats'
 
 export default function Home() {
   const { mutate } = useSWRConfig()
@@ -27,6 +30,9 @@ export default function Home() {
   const [showAddExpense, setShowAddExpense] = useState(false)
   const [showSettle, setShowSettle] = useState(false)
   const [addExpenseContext, setAddExpenseContext] = useState<{ groupId?: string } | null>(null)
+
+  const { data: unreadNotifications } = useSWR<any[]>('/api/notifications?unread=true', fetcher)
+  const unreadCount = unreadNotifications?.length || 0
 
   const handleSelectGroup = (group: Group) => {
     setSelectedGroup(group)
@@ -66,8 +72,19 @@ export default function Home() {
   }
 
   return (
-    <>
-      <AnimatePresence mode="wait">
+    <div className="flex min-h-screen bg-background relative overflow-x-hidden">
+      {/* Desktop Mesh Background Decorations */}
+      <div className="hidden md:block fixed top-[-10%] right-[-10%] w-[50%] h-[50%] rounded-full bg-primary/5 blur-[120px] pointer-events-none" />
+      <div className="hidden md:block fixed bottom-[-10%] left-[-10%] w-[50%] h-[50%] rounded-full bg-accent/5 blur-[120px] pointer-events-none" />
+
+      <DesktopSidebar 
+        activeView={view} 
+        onViewChange={(newView) => setView(newView)} 
+        unreadCount={unreadCount}
+      />
+
+      <div className="flex-1 flex flex-col min-h-screen relative overflow-hidden md:ml-72">
+        <AnimatePresence mode="wait">
         {view === 'dashboard' ? (
           <Dashboard
             key="dashboard"
@@ -145,6 +162,7 @@ export default function Home() {
         }}
         onSettle={handleSettleComplete}
       />
-    </>
+    </div>
+  </div>
   )
 }

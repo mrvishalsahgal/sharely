@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ArrowLeft, Plus, Users, Settings, PieChart, MoreHorizontal, Edit2, BellOff, LogOut, Loader2, ChevronRight, Archive, ArchiveRestore } from 'lucide-react'
+import { ArrowLeft, Plus, Users, Settings, PieChart, MoreHorizontal, Edit2, BellOff, LogOut, Loader2, ChevronRight, Archive, ArchiveRestore, Activity } from 'lucide-react'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import useSWR, { useSWRConfig } from 'swr'
 import { fetcher } from '@/lib/fetcher'
@@ -91,9 +91,9 @@ export function GroupSpace({ group, onBack, onAddExpense, onAddMembers }: GroupS
   const isNegative = (group.userBalance || 0) < 0
 
   return (
-    <div className="min-h-screen flex flex-col">
-      {/* Header */}
-      <header className="sticky top-0 z-50 glass-card border-b border-border/50">
+    <div className="min-h-screen flex flex-col md:pb-8">
+      {/* Mobile Header - Hidden on Desktop */}
+      <header className="md:hidden sticky top-0 z-50 glass-card border-b border-border/50">
         <div className="max-w-lg mx-auto px-4 py-4">
           {/* Top row */}
           <div className="flex items-center justify-between mb-4">
@@ -218,80 +218,227 @@ export function GroupSpace({ group, onBack, onAddExpense, onAddMembers }: GroupS
         </div>
       </header>
 
-      {/* Content */}
-      <main className="flex-1 max-w-lg mx-auto w-full px-4 py-6">
-        <AnimatePresence mode="wait">
-          {group.isArchived && (
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              className="mb-6 p-4 rounded-2xl bg-secondary/50 border border-dashed border-border flex flex-col items-center text-center gap-2"
+      {/* Desktop Header - Visible only on Desktop */}
+      <header className="hidden md:block sticky top-0 z-50 bg-background/50 backdrop-blur-md border-b border-border/50">
+        <div className="max-w-7xl mx-auto px-8 py-6 flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={onBack}
+              className="p-3 rounded-2xl bg-secondary/50 hover:bg-secondary transition-colors"
             >
-              <div className="w-10 h-10 rounded-full bg-background flex items-center justify-center">
-                <Archive className="w-5 h-5 text-muted-foreground" />
+              <ArrowLeft className="w-6 h-6" />
+            </motion.button>
+            <div className="flex items-center gap-4">
+              <div className="w-16 h-16 rounded-2xl bg-secondary flex items-center justify-center text-3xl shadow-lg shadow-black/5">
+                {group.emoji}
               </div>
               <div>
-                <p className="font-bold text-sm">Group Archived</p>
-                <p className="text-xs text-muted-foreground">This group is in read-only mode. Unarchive it from the settings to add new expenses.</p>
+                <h1 className="text-3xl font-black tracking-tight">{group.name}</h1>
+                <div className="flex items-center gap-3 mt-1">
+                  <span className="text-sm font-medium text-muted-foreground flex items-center gap-1">
+                    <Users className="w-4 h-4" />
+                    {group.members?.length || 0} members
+                  </span>
+                  <div className="w-1 h-1 rounded-full bg-border" />
+                  <span className={`text-sm font-bold ${isPositive ? 'text-positive' : isNegative ? 'text-negative' : 'text-muted-foreground'}`}>
+                    {isPositive ? `You are owed $${group.userBalance?.toFixed(2)}` : isNegative ? `You owe $${Math.abs(group.userBalance || 0).toFixed(2)}` : 'You are all settled up'}
+                  </span>
+                </div>
               </div>
-            </motion.div>
-          )}
-
-          {activeTab === 'expenses' && (
-            <motion.div
-              key="expenses"
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: 20 }}
-              className="space-y-4"
+            </div>
+          </div>
+          <div className="flex items-center gap-3">
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={onAddMembers}
+              className="flex items-center gap-2 px-6 py-3 rounded-2xl bg-secondary/50 hover:bg-secondary font-bold transition-all"
             >
-                  {expenses.map((expense, index) => (
-                    <ExpenseBubble
-                      key={expense.id}
-                      expense={expense}
-                      index={index}
-                      onReact={handleReact}
-                    />
-                  ))}
+              <Users className="w-5 h-5" />
+              Manage Members
+            </motion.button>
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={onAddExpense}
+              className="flex items-center gap-2 px-8 py-3 rounded-2xl bg-primary text-primary-foreground font-bold shadow-lg shadow-primary/20 transition-all"
+            >
+              <Plus className="w-5 h-5" />
+              Add Expense
+            </motion.button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  className="p-3 rounded-2xl bg-secondary/50 hover:bg-secondary transition-colors"
+                >
+                  <MoreHorizontal className="w-6 h-6" />
+                </motion.button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56 p-2 rounded-2xl border-border bg-card shadow-2xl">
+                <DropdownMenuItem className="gap-3 cursor-pointer rounded-xl p-3 hover:bg-secondary font-medium">
+                  <Edit2 className="w-5 h-5 text-muted-foreground" />
+                  <span>Edit Group</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem 
+                  onClick={() => setShowArchiveConfirm(true)}
+                  className="gap-3 cursor-pointer rounded-xl p-3 hover:bg-secondary font-medium"
+                >
+                  <Archive className="w-5 h-5 text-muted-foreground" />
+                  <span>{group.isArchived ? 'Unarchive Group' : 'Archive Group'}</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem 
+                  onClick={() => setShowLeaveConfirm(true)}
+                  className="gap-3 cursor-pointer rounded-xl p-3 hover:bg-negative/10 text-negative font-medium"
+                >
+                  <LogOut className="w-5 h-5" />
+                  <span>Leave Group</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        </div>
+      </header>
 
-                  {expenses.length === 0 && !expensesLoading && (
-                    <div className="text-center py-12">
-                      <div className="w-16 h-16 rounded-full bg-secondary flex items-center justify-center mx-auto mb-4">
-                        <Plus className="w-8 h-8 text-muted-foreground" />
-                      </div>
-                      <p className="text-muted-foreground">No expenses yet. Add one to get started!</p>
+      {/* Main Content Area */}
+      <main className="flex-1 max-w-7xl mx-auto w-full px-4 md:px-8 py-6 md:py-10">
+        {/* Desktop Layout (Grid) */}
+        <div className="hidden md:grid grid-cols-12 gap-10 items-start">
+          {/* Left Column: Expenses */}
+          <div className="md:col-span-7 space-y-6">
+            <h2 className="text-xl font-bold flex items-center gap-2 mb-6">
+              <Activity className="w-5 h-5 text-primary" />
+              Expenses
+            </h2>
+
+            <div className="space-y-4">
+              {group.isArchived && (
+                <motion.div
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="p-4 rounded-2xl bg-secondary/30 border border-dashed border-border flex items-center gap-3 text-muted-foreground"
+                >
+                  <Archive className="w-5 h-5 shrink-0" />
+                  <p className="text-xs font-medium">This group is archived and in read-only mode.</p>
+                </motion.div>
+              )}
+
+              {expenses.map((expense, index) => (
+                <ExpenseBubble
+                  key={expense.id}
+                  expense={expense}
+                  index={index}
+                  onReact={handleReact}
+                />
+              ))}
+
+              {expenses.length === 0 && !expensesLoading && (
+                <div className="text-center py-20 glass-card rounded-3xl border-dashed">
+                  <div className="w-20 h-20 rounded-full bg-secondary/50 flex items-center justify-center mx-auto mb-6">
+                    <Plus className="w-10 h-10 text-muted-foreground/50" />
+                  </div>
+                  <h3 className="text-lg font-bold">No expenses yet</h3>
+                  <p className="text-muted-foreground max-w-xs mx-auto mt-2 text-sm">Start splitting expenses with your group members to see them here.</p>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Right Column: Insights */}
+          <div className="md:col-span-5 sticky top-32 space-y-8">
+            <div className="glass-card rounded-3xl p-8 border border-primary/5 shadow-2xl shadow-primary/5 relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-bl from-primary/10 to-transparent rounded-bl-full" />
+              <h3 className="text-xl font-bold mb-6 flex items-center gap-2">
+                <PieChart className="w-5 h-5 text-accent" />
+                Group Insights
+              </h3>
+              <div className="space-y-8">
+                <GroupBalances group={group} />
+                <div className="pt-8 border-t border-border/50">
+                  <GroupStats group={group} />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Mobile Layout (Tabs) - Restored to original state */}
+        <div className="md:hidden">
+          <AnimatePresence mode="wait">
+            {group.isArchived && (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="mb-6 p-4 rounded-2xl bg-secondary/50 border border-dashed border-border flex flex-col items-center text-center gap-2"
+              >
+                <div className="w-10 h-10 rounded-full bg-background flex items-center justify-center">
+                  <Archive className="w-5 h-5 text-muted-foreground" />
+                </div>
+                <div>
+                  <p className="font-bold text-sm">Group Archived</p>
+                  <p className="text-xs text-muted-foreground">This group is in read-only mode.</p>
+                </div>
+              </motion.div>
+            )}
+
+            {activeTab === 'expenses' && (
+              <motion.div
+                key="expenses"
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: 20 }}
+                className="space-y-4"
+              >
+                {expenses.map((expense, index) => (
+                  <ExpenseBubble
+                    key={expense.id}
+                    expense={expense}
+                    index={index}
+                    onReact={handleReact}
+                  />
+                ))}
+                {expenses.length === 0 && !expensesLoading && (
+                  <div className="text-center py-12">
+                    <div className="w-16 h-16 rounded-full bg-secondary flex items-center justify-center mx-auto mb-4">
+                      <Plus className="w-8 h-8 text-muted-foreground" />
                     </div>
-                  )}
-            </motion.div>
-          )}
+                    <p className="text-muted-foreground">No expenses yet.</p>
+                  </div>
+                )}
+              </motion.div>
+            )}
 
-          {activeTab === 'balances' && (
-            <motion.div
-              key="balances"
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: 20 }}
-              className="space-y-4"
-            >
-              <GroupBalances group={group} />
-            </motion.div>
-          )}
+            {activeTab === 'balances' && (
+              <motion.div
+                key="balances"
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: 20 }}
+                className="space-y-4"
+              >
+                <GroupBalances group={group} />
+              </motion.div>
+            )}
 
-          {activeTab === 'stats' && (
-            <motion.div
-              key="stats"
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: 20 }}
-              className="space-y-4"
-            >
-              <GroupStats group={group} />
-            </motion.div>
-          )}
-        </AnimatePresence>
+            {activeTab === 'stats' && (
+              <motion.div
+                key="stats"
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: 20 }}
+                className="space-y-4"
+              >
+                <GroupStats group={group} />
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
       </main>
 
-      {/* Floating Add Button */}
+      {/* Floating Add Button - Mobile Only */}
       {!group.isArchived && (
         <motion.button
           initial={{ scale: 0 }}
@@ -299,7 +446,7 @@ export function GroupSpace({ group, onBack, onAddExpense, onAddMembers }: GroupS
           whileHover={{ scale: 1.1 }}
           whileTap={{ scale: 0.9 }}
           onClick={onAddExpense}
-          className="fixed bottom-6 right-6 w-16 h-16 rounded-full bg-gradient-to-br from-primary to-accent text-primary-foreground shadow-2xl flex items-center justify-center z-50"
+          className="md:hidden fixed bottom-6 right-6 w-16 h-16 rounded-full bg-gradient-to-br from-primary to-accent text-primary-foreground shadow-2xl flex items-center justify-center z-50"
         >
           <Plus className="w-8 h-8" />
         </motion.button>

@@ -4,12 +4,16 @@ import { connectDB } from '@/lib/mongodb'
 import Expense from '@/lib/models/Expense'
 import Settlement from '@/lib/models/Settlement'
 
-export async function GET() {
+export async function GET(request: Request) {
   const session = await auth()
   if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   try {
     await connectDB()
+    const { searchParams } = new URL(request.url)
+    const page = parseInt(searchParams.get('page') || '1')
+    const limit = parseInt(searchParams.get('limit') || '10')
+    const skip = (page - 1) * limit
     const userId = session.user.id
 
     // Fetch recent expenses where user is involved
@@ -21,7 +25,7 @@ export async function GET() {
     })
     .populate('paidBy', 'name avatar')
     .sort({ createdAt: -1 })
-    .limit(25)
+    .limit(skip + limit)
     .lean()
 
     // Fetch recent settlements where user is involved
@@ -34,11 +38,11 @@ export async function GET() {
     .populate('fromUser', 'name avatar')
     .populate('toUser', 'name avatar')
     .sort({ createdAt: -1 })
-    .limit(25)
+    .limit(skip + limit)
     .lean()
 
     // Combine and format
-    const activities = [
+    const allActivities = [
       ...expenses.map((e: any) => ({
         id: e._id,
         type: 'expense',
@@ -58,9 +62,11 @@ export async function GET() {
         method: s.method,
       }))
     ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-    .slice(0, 50)
 
-    return NextResponse.json(activities)
+    // Apply proper pagination slice
+    const paginatedActivities = allActivities.slice(skip, skip + limit)
+
+    return NextResponse.json(paginatedActivities)
   } catch (error) {
     console.error('Error fetching activity feed:', error)
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 })

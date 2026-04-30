@@ -96,13 +96,12 @@ export function AnimatedBalance({ amount, showPulse = true }: AnimatedBalancePro
         <span className="text-sm font-medium">{getStatusText()}</span>
       </motion.div>
 
-      {/* Main balance amount */}
       <motion.div
-        className="relative z-10"
+        className="relative z-10 w-full text-center"
         animate={isAnimating ? { scale: [1, 1.02, 1] } : {}}
         transition={{ duration: 0.3 }}
       >
-        <span className={`text-7xl md:text-8xl font-bold tracking-tight ${
+        <span className={`text-7xl md:text-5xl lg:text-6xl font-black tracking-tighter leading-none inline-block max-w-full break-words ${
           isNeutral 
             ? 'text-muted-foreground' 
             : isPositive 
@@ -115,7 +114,7 @@ export function AnimatedBalance({ amount, showPulse = true }: AnimatedBalancePro
             initial={{ opacity: 0.8 }}
             animate={{ opacity: 1 }}
           >
-            {(Math.abs(displayAmount ?? 0)).toFixed(2)}
+            {(Math.abs(displayAmount ?? 0)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
           </motion.span>
         </span>
       </motion.div>
