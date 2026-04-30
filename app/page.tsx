@@ -93,7 +93,7 @@ function HomeContent() {
   }
 
   return (
-    <div className="flex min-h-screen bg-background relative overflow-x-hidden">
+    <div className="flex min-h-screen bg-background relative overflow-x-clip">
       {/* Desktop Mesh Background Decorations */}
       <div className="hidden md:block fixed top-[-10%] right-[-10%] w-[50%] h-[50%] rounded-full bg-primary/5 blur-[120px] pointer-events-none" />
       <div className="hidden md:block fixed bottom-[-10%] left-[-10%] w-[50%] h-[50%] rounded-full bg-accent/5 blur-[120px] pointer-events-none" />
@@ -104,7 +104,7 @@ function HomeContent() {
         unreadCount={unreadCount}
       />
 
-      <div className="flex-1 flex flex-col min-h-screen relative overflow-hidden md:ml-72">
+      <div className="flex-1 flex flex-col min-h-screen relative md:ml-72">
         <AnimatePresence mode="wait">
         {view === 'dashboard' ? (
           <Dashboard

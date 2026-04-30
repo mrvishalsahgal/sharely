@@ -76,8 +76,8 @@ export function Dashboard({
       <header className="md:hidden sticky top-0 z-50 glass-card border-b border-border/50">
         <div className="max-w-lg mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2 max-w-[60%]">
-              <div className="w-8 h-8 relative shrink-0">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 relative shrink-0 shadow-sm rounded-xl overflow-hidden">
                 <Image 
                   src="/desktoplogo.png" 
                   alt="Sharely" 
@@ -86,9 +86,9 @@ export function Dashboard({
                   priority
                 />
               </div>
-              <div className="min-w-0">
-                <h1 className="text-lg font-bold gradient-text leading-none mb-0.5">Sharely</h1>
-                <p className="text-[8px] text-muted-foreground font-black uppercase tracking-wider truncate">Split expenses. Not friendships</p>
+              <div className="flex flex-col">
+                <h1 className="text-xl font-black tracking-tight gradient-text leading-none">Sharely</h1>
+                <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-[0.15em] mt-1">Split expenses</p>
               </div>
             </div>
             <div className="flex items-center gap-2">
@@ -106,14 +106,6 @@ export function Dashboard({
                 className="relative p-2 rounded-xl bg-secondary hover:bg-secondary/80 transition-colors"
               >
                 <User className="w-5 h-5" />
-              </motion.button>
-              <motion.button
-                onClick={onOpenActivity}
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                className="relative p-2 rounded-xl bg-secondary hover:bg-secondary/80 transition-colors"
-              >
-                <Activity className="w-5 h-5" />
               </motion.button>
               <motion.button
                 whileHover={{ scale: 1.05 }}
