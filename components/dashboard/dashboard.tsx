@@ -4,6 +4,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Plus, Bell, Settings, Search, User, Activity, Loader2, Archive, ChevronDown, ChevronUp } from 'lucide-react'
+import Image from 'next/image'
 import useSWR from 'swr'
 import { fetcher } from '@/lib/fetcher'
 import { AnimatedBalance } from './animated-balance'
@@ -75,9 +76,20 @@ export function Dashboard({
       <header className="md:hidden sticky top-0 z-50 glass-card border-b border-border/50">
         <div className="max-w-lg mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-bold gradient-text">Sharely</h1>
-              <p className="text-sm text-muted-foreground">Split expenses. Not friendships</p>
+            <div className="flex items-center gap-2 max-w-[60%]">
+              <div className="w-8 h-8 relative shrink-0">
+                <Image 
+                  src="/desktoplogo.png" 
+                  alt="Sharely" 
+                  fill 
+                  className="object-contain"
+                  priority
+                />
+              </div>
+              <div className="min-w-0">
+                <h1 className="text-lg font-bold gradient-text leading-none mb-0.5">Sharely</h1>
+                <p className="text-[8px] text-muted-foreground font-black uppercase tracking-wider truncate">Split expenses. Not friendships</p>
+              </div>
             </div>
             <div className="flex items-center gap-2">
               <motion.button

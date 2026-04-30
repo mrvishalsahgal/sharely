@@ -13,6 +13,7 @@ import {
   PieChart
 } from 'lucide-react'
 import { signOut } from 'next-auth/react'
+import Image from 'next/image'
 
 interface DesktopSidebarProps {
   activeView: string
@@ -32,14 +33,20 @@ export function DesktopSidebar({ activeView, onViewChange, unreadCount }: Deskto
 
   return (
     <div className="hidden md:flex flex-col w-72 h-screen fixed left-0 top-0 bg-card/30 backdrop-blur-xl border-r border-border/50 p-6 z-50">
-      {/* Logo */}
       <div className="flex items-center gap-3 px-2 mb-10">
-        <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-primary to-accent flex items-center justify-center shadow-lg shadow-primary/20">
-          <PlusCircle className="w-6 h-6 text-white" />
+        <div className="w-10 h-10 relative flex items-center justify-center">
+          <Image 
+            src="/desktoplogo.png" 
+            alt="Sharely Logo" 
+            width={40} 
+            height={40} 
+            className="object-contain"
+            priority
+          />
         </div>
         <div>
-          <h1 className="text-xl font-black tracking-tight gradient-text">Sharely</h1>
-          <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest">Split expenses. Not friendships</p>
+          <h1 className="text-lg font-black tracking-tight gradient-text leading-none mb-1">Sharely</h1>
+          <p className="text-[9px] text-muted-foreground font-black uppercase tracking-widest leading-none">Split expenses.<br/>Not friendships</p>
         </div>
       </div>
       <nav className="flex-1 space-y-2">
